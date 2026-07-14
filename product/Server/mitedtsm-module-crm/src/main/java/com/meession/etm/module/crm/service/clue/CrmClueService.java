@@ -8,6 +8,7 @@ import com.meession.etm.module.crm.dal.dataobject.clue.CrmClueDO;
 import jakarta.validation.Valid;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 线索 Service 接口
@@ -87,5 +88,28 @@ public interface CrmClueService {
      * @return 数量
      */
     Long getFollowClueCount(Long userId);
+
+    /**
+     * 线索放入公海
+     *
+     * @param id 线索编号
+     */
+    void putCluePool(Long id);
+
+    /**
+     * 领取/分配公海线索
+     *
+     * @param ids         线索编号列表
+     * @param userId      成员编号
+     * @param isReceive   是否为领取
+     */
+    void receiveClue(List<Long> ids, Long userId, Boolean isReceive);
+
+    /**
+     * 获得公海线索数量
+     *
+     * @return 数量
+     */
+    Long getCluePoolCount();
 
 }

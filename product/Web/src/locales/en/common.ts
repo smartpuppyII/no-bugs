@@ -1,6 +1,7 @@
 export default {
   inputText: 'Please input',
   selectText: 'Please select',
+  pleaseSelect: 'Please Select',
   startTimeText: 'Start time',
   endTimeText: 'End time',
   startTime: 'Start Date',
@@ -50,6 +51,8 @@ export default {
   delDataMessage: 'Delete the data?',
   delNoData: 'Please select the data to delete',
   delSuccess: 'Deleted successfully',
+  batchActionConfirm: 'Confirm {action} on {count} selected records?',
+  batchActionSuccess: 'Batch operation successful',
   index: 'Index',
   status: 'Status',
   createTime: 'Create Time',

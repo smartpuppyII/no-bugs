@@ -15,6 +15,7 @@ import com.meession.etm.module.crm.dal.dataobject.business.CrmBusinessDO;
 import com.meession.etm.module.crm.dal.dataobject.business.CrmBusinessProductDO;
 import com.meession.etm.module.crm.dal.dataobject.business.CrmBusinessStatusDO;
 import com.meession.etm.module.crm.dal.dataobject.contact.CrmContactBusinessDO;
+import com.meession.etm.module.crm.dal.dataobject.transfer.CrmTransferLogDO;
 import com.meession.etm.module.crm.dal.mysql.business.CrmBusinessMapper;
 import com.meession.etm.module.crm.dal.mysql.business.CrmBusinessProductMapper;
 import com.meession.etm.module.crm.enums.common.CrmBizTypeEnum;
@@ -28,6 +29,7 @@ import com.meession.etm.module.crm.service.permission.CrmPermissionService;
 import com.meession.etm.module.crm.service.permission.bo.CrmPermissionCreateReqBO;
 import com.meession.etm.module.crm.service.permission.bo.CrmPermissionTransferReqBO;
 import com.meession.etm.module.crm.service.product.CrmProductService;
+import com.meession.etm.module.crm.service.transfer.CrmTransferLogService;
 import com.meession.etm.module.system.api.user.AdminUserApi;
 import com.mzt.logapi.context.LogRecordContext;
 import com.mzt.logapi.service.impl.DiffParseFunction;
@@ -69,6 +71,7 @@ public class CrmBusinessServiceImpl implements CrmBusinessService {
     @Lazy // 延迟加载，避免循环依赖
     private CrmContractService contractService;
     @Resource
+    @Lazy // 延迟加载，避免循环依赖
     private CrmCustomerService customerService;
     @Resource
     @Lazy // 延迟加载，避免循环依赖
@@ -79,6 +82,9 @@ public class CrmBusinessServiceImpl implements CrmBusinessService {
     private CrmContactBusinessService contactBusinessService;
     @Resource
     private CrmProductService productService;
+
+    @Resource
+    private CrmTransferLogService transferLogService;
 
     @Resource
     private AdminUserApi adminUserApi;
@@ -309,6 +315,19 @@ public class CrmBusinessServiceImpl implements CrmBusinessService {
 
         // 记录操作日志上下文
         LogRecordContext.putVariable("business", business);
+
+        // 记录手动转移日志
+        CrmTransferLogDO transferLog = CrmTransferLogDO.builder()
+                .bizType(CrmBizTypeEnum.CRM_BUSINESS.getType())
+                .bizId(business.getId())
+                .bizName(business.getName())
+                .fromUserId(business.getOwnerUserId())
+                .toUserId(reqVO.getNewOwnerUserId())
+                .transferType(1)
+                .remark("手动转移")
+                .createTime(LocalDateTime.now())
+                .build();
+        transferLogService.createTransferLog(transferLog);
     }
 
     //======================= 查询相关 =======================

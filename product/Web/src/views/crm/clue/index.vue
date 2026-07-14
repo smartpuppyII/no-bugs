@@ -72,6 +72,33 @@
             >
               <Icon icon="ep:download" class="mr-5px" /> {{ t('common.export') }}
             </el-button>
+            <el-button
+              v-hasPermi="['crm:clue:update']"
+              :disabled="selectionList.length === 0"
+              plain
+              type="primary"
+              @click="handleBatchAssign"
+            >
+              {{ t('clue.batchAssign') }}
+            </el-button>
+            <el-button
+              v-hasPermi="['crm:clue:update']"
+              :disabled="selectionList.length === 0"
+              plain
+              type="warning"
+              @click="handleBatchTransform"
+            >
+              {{ t('clue.batchTransform') }}
+            </el-button>
+            <el-button
+              v-hasPermi="['crm:clue:delete']"
+              :disabled="selectionList.length === 0"
+              plain
+              type="danger"
+              @click="handleBatchDelete"
+            >
+              {{ t('clue.batchDelete') }}
+            </el-button>
           </el-form-item>
         </el-col>
       </el-row>
@@ -85,7 +112,8 @@
       <el-tab-pane :label="t('customer.myInvolved')" name="2" />
       <el-tab-pane :label="t('customer.subordinateResponsible')" name="3" />
     </el-tabs>
-    <el-table v-loading="loading" :data="list" :stripe="true" :show-overflow-tooltip="true" :table-layout="'auto'">
+    <el-table v-loading="loading" :data="list" :stripe="true" :show-overflow-tooltip="true" :table-layout="'auto'" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="55" />
       <el-table-column :label="t('clue.name')" align="center" prop="name" fixed="left" min-width="160">
         <template #default="scope">
           <el-link :underline="false" type="primary" @click="openDetail(scope.row.id)">
@@ -145,7 +173,7 @@
         min-width="180"
       />
       <el-table-column align="center" :label="t('clue.creatorName')" prop="creatorName" min-width="100" />
-      <el-table-column :label="t('common.action')" align="center" min-width="150" fixed="right">
+      <el-table-column :label="t('common.action')" align="center" min-width="240" fixed="right">
         <template #default="scope">
           <el-button
             link
@@ -154,6 +182,14 @@
             v-hasPermi="['crm:clue:update']"
           >
             {{ t('common.edit') }}
+          </el-button>
+          <el-button
+            link
+            type="warning"
+            @click="handlePutPool(scope.row)"
+            v-hasPermi="['crm:clue:update']"
+          >
+            {{ t('clue.putPool') }}
           </el-button>
           <el-button
             link
@@ -177,6 +213,8 @@
 
   <!-- 表单弹窗：添加/修改 -->
   <ClueForm ref="formRef" @success="getList" />
+  <!-- 批量操作弹窗 -->
+  <BatchAssignDialog ref="batchAssignDialogRef" @confirm="handleBatchAssignConfirm" />
 </template>
 
 <script setup lang="ts">
@@ -185,6 +223,7 @@ import { dateFormatter } from '@/utils/formatTime'
 import download from '@/utils/download'
 import * as ClueApi from '@/api/crm/clue'
 import ClueForm from './ClueForm.vue'
+import BatchAssignDialog from '../components/BatchAssignDialog.vue'
 import { TabsPaneContext } from 'element-plus'
 
 defineOptions({ name: 'CrmClue' })
@@ -206,6 +245,12 @@ const queryParams = reactive({
 const queryFormRef = ref() // 搜索的表单
 const exportLoading = ref(false) // 导出的加载中
 const activeName = ref('1') // 列表 tab
+const selectionList = ref<any[]>([]) // 选中的行数据
+
+/** 多选操作 */
+const handleSelectionChange = (rows: any[]) => {
+  selectionList.value = rows
+}
 
 /** 查询列表 */
 const getList = async () => {
@@ -249,6 +294,16 @@ const openForm = (type: string, id?: number) => {
   formRef.value.open(type, id)
 }
 
+/** 放入公海操作 */
+const handlePutPool = async (row: any) => {
+  try {
+    await message.confirm(t('clue.putPoolConfirm', { name: row.name }))
+    await ClueApi.putCluePool(row.id)
+    message.success(t('clue.putPoolSuccess', { name: row.name }))
+    await getList()
+  } catch {}
+}
+
 /** 删除按钮操作 */
 const handleDelete = async (id: number) => {
   try {
@@ -275,6 +330,42 @@ const handleExport = async () => {
   } finally {
     exportLoading.value = false
   }
+}
+
+/** 批量删除 */
+const handleBatchDelete = async () => {
+  try {
+    const ids = selectionList.value.map((row: any) => row.id)
+    await message.confirm(t('clue.batchDeleteConfirm', { count: ids.length }))
+    await ClueApi.batchDeleteClue(ids)
+    message.success(t('common.batchActionSuccess'))
+    await getList()
+  } catch {}
+}
+
+/** 批量分配 */
+const batchAssignDialogRef = ref()
+const handleBatchAssign = () => {
+  const ids = selectionList.value.map((row: any) => row.id)
+  batchAssignDialogRef.value.open(ids)
+}
+const handleBatchAssignConfirm = async (data: { userId: number; ids: number[] }) => {
+  try {
+    await ClueApi.distributeClue({ ids: data.ids, ownerUserId: data.userId })
+    message.success(t('common.batchActionSuccess'))
+    await getList()
+  } catch {}
+}
+
+/** 批量转为客户 */
+const handleBatchTransform = async () => {
+  try {
+    const ids = selectionList.value.map((row: any) => row.id)
+    await message.confirm(t('clue.batchTransformConfirm', { count: ids.length }))
+    await ClueApi.batchTransformClue(ids)
+    message.success(t('common.batchActionSuccess'))
+    await getList()
+  } catch {}
 }
 
 /** 初始化 **/

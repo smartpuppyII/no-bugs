@@ -108,6 +108,15 @@
               <Icon class="mr-5px" icon="ep:download" />
               {{ t('common.export') }}
             </el-button>
+            <el-button
+              v-hasPermi="['crm:customer:receive']"
+              :disabled="selectionList.length === 0"
+              plain
+              type="primary"
+              @click="handleBatchReceive"
+            >
+              {{ t('batchReceive') }}
+            </el-button>
           </el-form-item>
         </el-col>
       </el-row>
@@ -116,12 +125,26 @@
 
   <!-- 列表 -->
   <ContentWrap>
-    <el-table v-loading="loading" :data="list" :show-overflow-tooltip="true" :stripe="true" :table-layout="'auto'">
+    <el-table v-loading="loading" :data="list" :show-overflow-tooltip="true" :stripe="true" :table-layout="'auto'" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="55" />
       <el-table-column align="center" :label="t('name')" fixed="left" prop="name" min-width="160">
         <template #default="scope">
           <el-link :underline="false" type="primary" @click="openDetail(scope.row.id)">
             {{ scope.row.name }}
           </el-link>
+        </template>
+      </el-table-column>
+      <el-table-column align="center" :label="t('tags')" prop="tags" min-width="180">
+        <template #default="scope">
+          <el-tag
+            v-for="tag in scope.row.tags"
+            :key="tag.id"
+            :color="tag.color"
+            class="mr-4px mb-2px"
+            size="small"
+          >
+            {{ tag.name }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column align="center" :label="t('source')" prop="source" min-width="100">
@@ -215,6 +238,12 @@ const queryParams = ref({
 })
 const queryFormRef = ref() // 搜索的表单
 const exportLoading = ref(false) // 导出的加载中
+const selectionList = ref<any[]>([]) // 选中的行数据
+
+/** 多选操作 */
+const handleSelectionChange = (rows: any[]) => {
+  selectionList.value = rows
+}
 
 /** 查询列表 */
 const getList = async () => {
@@ -279,6 +308,17 @@ watch(
     getList()
   }
 )
+
+/** 批量领取 */
+const handleBatchReceive = async () => {
+  try {
+    const ids = selectionList.value.map((row: any) => row.id)
+    await message.confirm(t('batchReceiveConfirm', { count: ids.length }))
+    await CustomerApi.receiveCustomer(ids)
+    message.success(t('common.batchActionSuccess'))
+    await getList()
+  } catch {}
+}
 
 /** 初始化 **/
 onMounted(() => {

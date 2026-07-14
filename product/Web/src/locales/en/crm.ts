@@ -68,6 +68,10 @@ export default {
     poolDay: 'Days to Pool',
     ownerUserDeptName: 'Department',
     dayUnit: 'days',
+    tags: 'Tags',
+    tagsPlaceholder: 'Please select tags',
+    addTag: 'Add Tag',
+    noMoreTags: 'No more tags',
     exportFileName: 'customer',
     poolExportFileName: 'customer_pool',
     // Tab labels
@@ -135,7 +139,16 @@ export default {
       notifyDaysBefore: 'Advance',
       notifyDaysAfter: 'days to notify',
       enabledRequired: 'Customer pool enabled cannot be empty'
-    }
+    },
+    // Batch Operations
+    batchLock: 'Batch Lock',
+    batchUnlock: 'Batch Unlock',
+    batchTag: 'Batch Tag',
+    batchAssign: 'Batch Assign',
+    batchPutPool: 'Batch Put Pool',
+    batchReceive: 'Batch Receive',
+    batchPutPoolConfirm: 'Confirm putting {count} selected customers into public pool?',
+    batchReceiveConfirm: 'Confirm receiving {count} selected customers?'
   },
   contact: {
     title: 'Contact',
@@ -203,7 +216,10 @@ export default {
     teamMemberTab: 'Team Members',
     businessTab: 'Business',
     // Dialog
-    relateTitle: 'Relate Contact'
+    relateTitle: 'Relate Contact',
+    // Batch Operations
+    batchDelete: 'Batch Delete',
+    batchDeleteConfirm: 'Confirm deleting {count} selected contacts?'
   },
   business: {
     title: 'Business Management',
@@ -295,7 +311,9 @@ export default {
     winRatePercent: 'Win Rate (%)',
     statusNamePlaceholder: 'Please enter status name',
     winRatePlaceholder: 'Please enter win rate',
-    statusNameRequired: 'Status group name cannot be empty'
+    statusNameRequired: 'Status group name cannot be empty',
+    // Batch Operations
+    batchTransfer: 'Batch Transfer'
   },
   contract: {
     title: 'Contract Management',
@@ -548,7 +566,13 @@ export default {
     basicInfoTab: 'Basic Info',
     followUpTab: 'Follow Up Records',
     operateLogTab: 'Operation Log',
-    teamMemberTab: 'Team Members'
+    teamMemberTab: 'Team Members',
+    // Batch Operations
+    batchAssign: 'Batch Assign',
+    batchTransform: 'Batch Transform',
+    batchDelete: 'Batch Delete',
+    batchDeleteConfirm: 'Confirm deleting {count} selected clues?',
+    batchTransformConfirm: 'Confirm transforming {count} selected clues to customers?'
   },
   permission: {
     title: 'Team Members',
@@ -832,5 +856,112 @@ export default {
     count: 'Count',
     amount: 'Amount',
     ratio: 'Ratio'
+  },
+  // CRM Dashboard
+  dashboard: {
+    title: 'CRM Dashboard',
+    quickLinks: 'Quick Links',
+    newCustomer: 'New Customer',
+    newClue: 'New Clue',
+    newBusiness: 'New Business',
+    newContract: 'New Contract',
+    backlog: 'Backlog',
+    customerMgmt: 'Customer Mgmt'
+  },
+  // Handover
+  handover: {
+    title: 'Departure Handover Management',
+    step1: 'Step 1: Select Departing User',
+    step2: 'Step 2: Preview Data & Assign Receivers',
+    selectDepartingUser: 'Departing User',
+    departingUser: 'Departing User',
+    selectUserPlaceholder: 'Please select departing user',
+    previewData: 'Preview Data',
+    dataType: 'Data Type',
+    dataCount: 'Count',
+    receiver: 'Receiver',
+    receiverPlaceholder: 'Select receiver (leave empty to skip)',
+    remark: 'Remark',
+    remarkPlaceholder: 'e.g. John is leaving, handover to Jane',
+    confirmExecute: 'Confirm Handover',
+    transferLog: 'Transfer Log',
+    bizName: 'Business Name',
+    bizType: 'Business Type',
+    fromUser: 'From User',
+    toUser: 'To User',
+    transferType: 'Transfer Type',
+    remarkCol: 'Remark',
+    createTime: 'Create Time',
+    confirmMessage: 'Confirm to execute handover? All data will be transferred.',
+    executeSuccess: 'Handover Complete',
+    customerData: 'Customer',
+    clueData: 'Clue',
+    businessData: 'Business',
+    contractData: 'Contract',
+    contactData: 'Contact',
+    receivablePlanData: 'Receivable Plan',
+    manualTransfer: 'Manual',
+    departureTransfer: 'Departure',
+    systemAuto: 'System Auto',
+    totalCount: 'Total {count} items'
+  },
+  // Batch Operations
+  batch: {
+    select: 'Select',
+    batchDelete: 'Batch Delete',
+    batchLock: 'Batch Lock',
+    batchUnlock: 'Batch Unlock',
+    batchTag: 'Batch Tag',
+    batchAssign: 'Batch Assign',
+    batchPutPool: 'Batch Put Pool',
+    batchTransform: 'Batch Transform',
+    batchTransfer: 'Batch Transfer',
+    batchReceive: 'Batch Receive',
+    selectedCount: '{count} records selected',
+    confirmDelete: 'Confirm delete {count} selected records?',
+    confirmLock: 'Confirm lock {count} selected records?',
+    confirmUnlock: 'Confirm unlock {count} selected records?',
+    confirmAssign: 'Confirm assign {count} selected records to new owner?',
+    confirmPutPool: 'Confirm put {count} selected records to public pool?',
+    confirmTransform: 'Confirm transform {count} selected clues to customers?',
+    confirmTransfer: 'Confirm transfer {count} selected records?',
+    success: 'Batch operation successful',
+    batchPutPoolConfirm: 'Confirm putting {count} selected customers into public pool?',
+    batchReceiveConfirm: 'Confirm receiving {count} selected customers?'
+  },
+  // Batch Common Components
+  common: {
+    batchAssignTitle: 'Batch Assign',
+    selectedCount: '{count} records selected',
+    assignToUser: 'Assign To',
+    assignToUserPlaceholder: 'Please select new owner',
+    pleaseSelectUser: 'Please select a user',
+    batchTagTitle: 'Batch Tag',
+    tags: 'Tags',
+    tagPlaceholder: 'Please select tags',
+    pleaseSelect: 'Please Select',
+    pleaseSelectTag: 'Please select at least one tag',
+    batchConfirmMsg: 'Confirm [{operation}] on {count} selected records?'
+  },
+  // Duplicate Detection
+  duplicate: {
+    title: 'Duplicate Detection',
+    config: 'Dedup Config',
+    checkName: 'Check Name',
+    checkMobile: 'Check Mobile',
+    checkEmail: 'Check Email',
+    checkWechat: 'Check WeChat',
+    checkScope: 'Check Scope',
+    scopeAll: 'Company-wide',
+    scopeDept: 'Department',
+    scopeSelf: 'Self Only',
+    duplicateFound: 'Potential duplicates found',
+    matchField: 'Match Field',
+    matchValue: 'Match Value',
+    viewExisting: 'View Existing',
+    createAnyway: 'Create Anyway',
+    merge: 'Merge',
+    mergeConfirm: 'Confirm merging "{source}" into "{target}"? This cannot be undone.',
+    noDuplicate: 'No duplicates found'
   }
 }

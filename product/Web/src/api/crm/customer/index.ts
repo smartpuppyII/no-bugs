@@ -1,5 +1,6 @@
 import request from '@/config/axios'
 import { TransferReqVO } from '@/api/crm/permission'
+import type { TagVO } from '../tag'
 
 export interface CustomerVO {
   id: number // 编号
@@ -29,6 +30,7 @@ export interface CustomerVO {
   creatorName?: string // 创建人名称
   createTime: Date // 创建时间
   updateTime: Date // 更新时间
+  tags?: TagVO[] // 客户标签
 }
 
 // 查询客户列表
@@ -129,4 +131,57 @@ export const distributeCustomer = async (ids: any[], ownerUserId: number) => {
 // 客户放入公海
 export const putCustomerPool = async (id: number) => {
   return await request.put({ url: `/crm/customer/put-pool?id=${id}` })
+}
+
+// ======================= 查重操作 =======================
+
+// 检查客户是否重复
+export const checkDuplicateCustomer = async (data: { name?: string; mobile?: string; email?: string; wechat?: string }) => {
+  return await request.post({ url: '/crm/customer/check-duplicate', data })
+}
+
+// 获得重复客户列表
+export const getDuplicateCustomerList = async (checkName?: boolean, checkMobile?: boolean) => {
+  return await request.get({ url: '/crm/customer/duplicate-list', params: { checkName, checkMobile } })
+}
+
+// 合并客户
+export const mergeCustomer = async (sourceId: number, targetId: number) => {
+  return await request.post({ url: '/crm/customer/merge', params: { sourceId, targetId } })
+}
+
+// ======================= 批量操作 =======================
+
+// 批量锁定/解锁客户
+export const batchLockCustomer = async (ids: number[], lockStatus: boolean) => {
+  return await request.put({ url: '/crm/customer/batch-lock', params: { ids: ids.join(','), lockStatus } })
+}
+
+// 批量放入公海
+export const batchPutPool = async (ids: number[]) => {
+  return await request.put({ url: '/crm/customer/batch-put-pool', data: ids })
+}
+
+// 批量添加客户标签
+export const batchAddCustomerTag = async (customerIds: number[], tagIds: number[]) => {
+  return await request.post({ url: '/crm/customer/batch-tag', params: { customerIds: customerIds.join(','), tagIds: tagIds.join(',') } })
+}
+
+// ======================= 查重配置 =======================
+
+// 获得查重规则配置
+export const getDuplicateConfig = async () => {
+  return await request.get({ url: '/crm/duplicate-config/get' })
+}
+
+// 保存查重规则配置
+export const saveDuplicateConfig = async (data: any) => {
+  return await request.put({ url: '/crm/duplicate-config/save', data })
+}
+
+// ======================= 线索查重 =======================
+
+// 检查线索与已有客户是否重复
+export const checkDuplicateClue = async (data: { name?: string; mobile?: string; email?: string; wechat?: string }) => {
+  return await request.post({ url: '/crm/clue/check-duplicate', data })
 }

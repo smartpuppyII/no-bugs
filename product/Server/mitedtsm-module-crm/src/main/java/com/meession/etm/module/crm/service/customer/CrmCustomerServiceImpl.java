@@ -19,6 +19,7 @@ import com.meession.etm.module.crm.dal.dataobject.contract.CrmContractDO;
 import com.meession.etm.module.crm.dal.dataobject.customer.CrmCustomerDO;
 import com.meession.etm.module.crm.dal.dataobject.customer.CrmCustomerLimitConfigDO;
 import com.meession.etm.module.crm.dal.dataobject.customer.CrmCustomerPoolConfigDO;
+import com.meession.etm.module.crm.dal.dataobject.transfer.CrmTransferLogDO;
 import com.meession.etm.module.crm.dal.mysql.customer.CrmCustomerMapper;
 import com.meession.etm.module.crm.enums.common.CrmBizTypeEnum;
 import com.meession.etm.module.crm.enums.common.CrmSceneTypeEnum;
@@ -31,6 +32,8 @@ import com.meession.etm.module.crm.service.customer.bo.CrmCustomerCreateReqBO;
 import com.meession.etm.module.crm.service.permission.CrmPermissionService;
 import com.meession.etm.module.crm.service.permission.bo.CrmPermissionCreateReqBO;
 import com.meession.etm.module.crm.service.permission.bo.CrmPermissionTransferReqBO;
+import com.meession.etm.module.crm.service.duplicate.CrmCustomerDuplicateService;
+import com.meession.etm.module.crm.service.transfer.CrmTransferLogService;
 import com.meession.etm.module.system.api.user.AdminUserApi;
 import com.meession.etm.module.system.api.user.dto.AdminUserRespDTO;
 import com.mzt.logapi.context.LogRecordContext;
@@ -87,6 +90,15 @@ public class CrmCustomerServiceImpl implements CrmCustomerService {
     @Resource
     private AdminUserApi adminUserApi;
 
+    @Resource
+    private com.meession.etm.module.crm.service.tag.CrmTagService tagService;
+
+    @Resource
+    private CrmCustomerDuplicateService duplicateService;
+
+    @Resource
+    private CrmTransferLogService transferLogService;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     @LogRecord(type = CRM_CUSTOMER_TYPE, subType = CRM_CUSTOMER_CREATE_SUB_TYPE, bizNo = "{{#customer.id}}",
@@ -95,6 +107,20 @@ public class CrmCustomerServiceImpl implements CrmCustomerService {
         createReqVO.setId(null);
         // 1. 校验拥有客户是否到达上限
         validateCustomerExceedOwnerLimit(createReqVO.getOwnerUserId(), 1);
+
+        // 1.5 查重检查（仅记录日志，不阻断创建）
+        try {
+            List<Map<String, Object>> duplicates = duplicateService.checkDuplicate(
+                    createReqVO.getName(), createReqVO.getMobile(),
+                    createReqVO.getEmail(), createReqVO.getWechat(), userId);
+            if (CollUtil.isNotEmpty(duplicates)) {
+                log.warn("[createCustomer][用户({}) 创建客户时发现重复客户, name={}, mobile={}, email={}, wechat={}, duplicatesCount={}]",
+                        userId, createReqVO.getName(), createReqVO.getMobile(),
+                        createReqVO.getEmail(), createReqVO.getWechat(), duplicates.size());
+            }
+        } catch (Exception e) {
+            log.warn("[createCustomer][查重检查异常, 忽略继续创建, error={}]", e.getMessage());
+        }
 
         // 2. 插入客户
         CrmCustomerDO customer = initCustomer(createReqVO, userId);
@@ -222,6 +248,19 @@ public class CrmCustomerServiceImpl implements CrmCustomerService {
 
         // 3. 记录转移日志
         LogRecordContext.putVariable("customer", customer);
+
+        // 4. 记录手动转移日志
+        CrmTransferLogDO transferLog = CrmTransferLogDO.builder()
+                .bizType(CrmBizTypeEnum.CRM_CUSTOMER.getType())
+                .bizId(customer.getId())
+                .bizName(customer.getName())
+                .fromUserId(customer.getOwnerUserId())
+                .toUserId(reqVO.getNewOwnerUserId())
+                .transferType(1)
+                .remark("手动转移")
+                .createTime(LocalDateTime.now())
+                .build();
+        transferLogService.createTransferLog(transferLog);
     }
 
     /**

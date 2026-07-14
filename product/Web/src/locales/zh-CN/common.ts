@@ -1,6 +1,7 @@
 export default {
   inputText: '请输入',
   selectText: '请选择',
+  pleaseSelect: '请选择',
   startTimeText: '开始时间',
   endTimeText: '结束时间',
   startTime: '开始日期',
@@ -50,6 +51,8 @@ export default {
   delDataMessage: '是否删除数据？',
   delNoData: '请选择需要删除的数据',
   delSuccess: '删除成功',
+  batchActionConfirm: '确认对选中的 {count} 条记录执行【{action}】操作？',
+  batchActionSuccess: '批量操作成功',
   index: '序号',
   status: '状态',
   createTime: '创建时间',

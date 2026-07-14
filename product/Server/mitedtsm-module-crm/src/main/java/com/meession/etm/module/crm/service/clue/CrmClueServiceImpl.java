@@ -10,28 +10,35 @@ import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueTransferReqVO
 import com.meession.etm.module.crm.controller.admin.customer.vo.customer.CrmCustomerSaveReqVO;
 import com.meession.etm.module.crm.dal.dataobject.clue.CrmClueDO;
 import com.meession.etm.module.crm.dal.dataobject.followup.CrmFollowUpRecordDO;
+import com.meession.etm.module.crm.dal.dataobject.transfer.CrmTransferLogDO;
 import com.meession.etm.module.crm.dal.mysql.clue.CrmClueMapper;
 import com.meession.etm.module.crm.enums.common.CrmBizTypeEnum;
 import com.meession.etm.module.crm.enums.permission.CrmPermissionLevelEnum;
 import com.meession.etm.module.crm.framework.permission.core.annotations.CrmPermission;
 import com.meession.etm.module.crm.service.customer.CrmCustomerService;
 import com.meession.etm.module.crm.service.customer.bo.CrmCustomerCreateReqBO;
+import com.meession.etm.module.crm.service.duplicate.CrmCustomerDuplicateService;
 import com.meession.etm.module.crm.service.followup.CrmFollowUpRecordService;
 import com.meession.etm.module.crm.service.followup.bo.CrmFollowUpCreateReqBO;
 import com.meession.etm.module.crm.service.permission.CrmPermissionService;
 import com.meession.etm.module.crm.service.permission.bo.CrmPermissionCreateReqBO;
 import com.meession.etm.module.crm.service.permission.bo.CrmPermissionTransferReqBO;
+import com.meession.etm.module.crm.service.transfer.CrmTransferLogService;
 import com.meession.etm.module.system.api.user.AdminUserApi;
+import com.meession.etm.module.system.api.user.dto.AdminUserRespDTO;
 import com.mzt.logapi.context.LogRecordContext;
 import com.mzt.logapi.service.impl.DiffParseFunction;
 import com.mzt.logapi.starter.annotation.LogRecord;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import static com.meession.etm.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -48,6 +55,7 @@ import static com.meession.etm.module.system.enums.ErrorCodeConstants.USER_NOT_E
  * @author Wanwan
  */
 @Service
+@Slf4j
 @Validated
 public class CrmClueServiceImpl implements CrmClueService {
 
@@ -62,6 +70,12 @@ public class CrmClueServiceImpl implements CrmClueService {
     private CrmFollowUpRecordService followUpRecordService;
 
     @Resource
+    private CrmCustomerDuplicateService duplicateService;
+
+    @Resource
+    private CrmTransferLogService transferLogService;
+
+    @Resource
     private AdminUserApi adminUserApi;
 
     @Override
@@ -73,6 +87,20 @@ public class CrmClueServiceImpl implements CrmClueService {
         validateRelationDataExists(createReqVO);
         // 1.2 校验负责人是否存在
         adminUserApi.validateUser(createReqVO.getOwnerUserId());
+
+        // 1.3 查重检查（仅记录日志，不阻断创建）
+        try {
+            List<Map<String, Object>> duplicates = duplicateService.checkDuplicate(
+                    createReqVO.getName(), createReqVO.getMobile(),
+                    createReqVO.getEmail(), createReqVO.getWechat(), createReqVO.getOwnerUserId());
+            if (CollUtil.isNotEmpty(duplicates)) {
+                log.warn("[createClue][创建线索时发现重复客户, name={}, mobile={}, email={}, wechat={}, duplicatesCount={}]",
+                        createReqVO.getName(), createReqVO.getMobile(),
+                        createReqVO.getEmail(), createReqVO.getWechat(), duplicates.size());
+            }
+        } catch (Exception e) {
+            log.warn("[createClue][查重检查异常, 忽略继续创建, error={}]", e.getMessage());
+        }
 
         // 2. 插入线索
         CrmClueDO clue = BeanUtils.toBean(createReqVO, CrmClueDO.class);
@@ -173,6 +201,19 @@ public class CrmClueServiceImpl implements CrmClueService {
 
         // 3. 记录转移日志
         LogRecordContext.putVariable("clue", clue);
+
+        // 4. 记录手动转移日志
+        CrmTransferLogDO transferLog = CrmTransferLogDO.builder()
+                .bizType(CrmBizTypeEnum.CRM_CLUE.getType())
+                .bizId(clue.getId())
+                .bizName(clue.getName())
+                .fromUserId(clue.getOwnerUserId())
+                .toUserId(reqVO.getNewOwnerUserId())
+                .transferType(1)
+                .remark("手动转移")
+                .createTime(LocalDateTime.now())
+                .build();
+        transferLogService.createTransferLog(transferLog);
     }
 
     @Override
@@ -186,6 +227,19 @@ public class CrmClueServiceImpl implements CrmClueService {
         // 1.2 存在已经转化的
         if (clue.getTransformStatus()) {
             throw exception(CLUE_TRANSFORM_FAIL_ALREADY);
+        }
+
+        // 1.3 查重检查（仅记录日志，不阻断转化）
+        try {
+            List<Map<String, Object>> duplicates = duplicateService.checkDuplicate(
+                    clue.getName(), clue.getMobile(),
+                    clue.getEmail(), clue.getWechat(), userId);
+            if (CollUtil.isNotEmpty(duplicates)) {
+                log.warn("[transformClue][线索转化为客户时发现重复, clueId={}, name={}, mobile={}, duplicatesCount={}]",
+                        id, clue.getName(), clue.getMobile(), duplicates.size());
+            }
+        } catch (Exception e) {
+            log.warn("[transformClue][查重检查异常, 忽略继续转化, error={}]", e.getMessage());
         }
 
         // 2.1 遍历线索(未转化的线索)，创建对应的客户
@@ -227,6 +281,89 @@ public class CrmClueServiceImpl implements CrmClueService {
     @Override
     public Long getFollowClueCount(Long userId) {
         return clueMapper.selectCountByFollow(userId);
+    }
+
+    // ==================== 公海相关操作 ====================
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    @LogRecord(type = CRM_CLUE_TYPE, subType = CRM_CLUE_POOL_SUB_TYPE, bizNo = "{{#id}}",
+            success = CRM_CLUE_POOL_SUCCESS)
+    @CrmPermission(bizType = CrmBizTypeEnum.CRM_CLUE, bizId = "#id", level = CrmPermissionLevelEnum.OWNER)
+    public void putCluePool(Long id) {
+        // 1. 校验存在
+        CrmClueDO clue = validateClueExists(id);
+
+        // 2. 设置负责人为 NULL
+        int updateOwnerUserIncr = clueMapper.updateOwnerUserIdById(clue.getId(), null);
+        if (updateOwnerUserIncr == 0) {
+            throw exception(CLUE_NOT_EXISTS);
+        }
+
+        // 3. 删除负责人数据权限
+        crmPermissionService.deletePermission(CrmBizTypeEnum.CRM_CLUE.getType(), clue.getId(),
+                CrmPermissionLevelEnum.OWNER.getLevel());
+
+        // 4. 记录操作日志上下文
+        LogRecordContext.putVariable("clueName", clue.getName());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void receiveClue(List<Long> ids, Long ownerUserId, Boolean isReceive) {
+        // 1.1 校验存在
+        List<CrmClueDO> clues = clueMapper.selectByIds(ids);
+        if (clues.size() != ids.size()) {
+            throw exception(CLUE_NOT_EXISTS);
+        }
+        // 1.2 校验负责人是否存在
+        adminUserApi.validateUserList(singleton(ownerUserId));
+
+        // 2. 领取公海线索
+        List<CrmClueDO> updateClues = new ArrayList<>();
+        List<CrmPermissionCreateReqBO> createPermissions = new ArrayList<>();
+        clues.forEach(clue -> {
+            // 2.1 设置负责人
+            updateClues.add(new CrmClueDO().setId(clue.getId()).setOwnerUserId(ownerUserId));
+            // 2.2 创建负责人数据权限
+            createPermissions.add(new CrmPermissionCreateReqBO().setBizType(CrmBizTypeEnum.CRM_CLUE.getType())
+                    .setBizId(clue.getId()).setUserId(ownerUserId).setLevel(CrmPermissionLevelEnum.OWNER.getLevel()));
+        });
+        // 2.3 更新线索负责人
+        updateClues.forEach(clue -> clueMapper.updateById(clue));
+        // 2.4 创建负责人数据权限
+        crmPermissionService.createPermissionBatch(createPermissions);
+
+        // 3. 记录操作日志
+        AdminUserRespDTO user = null;
+        if (!isReceive) {
+            user = adminUserApi.getUser(ownerUserId);
+        }
+        for (CrmClueDO clue : clues) {
+            getSelf().receiveClueLog(clue, user == null ? null : user.getNickname());
+        }
+    }
+
+    @LogRecord(type = CRM_CLUE_TYPE, subType = CRM_CLUE_RECEIVE_SUB_TYPE, bizNo = "{{#clue.id}}",
+            success = CRM_CLUE_RECEIVE_SUCCESS)
+    public void receiveClueLog(CrmClueDO clue, String ownerUserName) {
+        // 记录操作日志上下文
+        LogRecordContext.putVariable("clue", clue);
+        LogRecordContext.putVariable("ownerUserName", ownerUserName);
+    }
+
+    @Override
+    public Long getCluePoolCount() {
+        return clueMapper.selectCountByPool();
+    }
+
+    /**
+     * 获得自身的代理对象，解决 AOP 生效问题
+     *
+     * @return 自己
+     */
+    private CrmClueServiceImpl getSelf() {
+        return cn.hutool.extra.spring.SpringUtil.getBean(getClass());
     }
 
 }

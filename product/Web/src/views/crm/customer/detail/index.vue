@@ -6,53 +6,94 @@
       type="primary"
       @click="openForm"
     >
-      {{ t('edit') }}
+      {{ t('customer.edit') }}
     </el-button>
     <el-button v-if="permissionListRef?.validateOwnerUser" type="primary" @click="transfer">
-      {{ t('transfer') }}
+      {{ t('customer.transfer') }}
     </el-button>
     <el-button v-if="permissionListRef?.validateWrite" @click="handleUpdateDealStatus">
-      {{ t('changeDealStatus') }}
+      {{ t('customer.changeDealStatus') }}
     </el-button>
     <el-button
       v-if="customer.lockStatus && permissionListRef?.validateOwnerUser"
       @click="handleUnlock"
     >
-      {{ t('unlock') }}
+      {{ t('customer.unlock') }}
     </el-button>
     <el-button
       v-if="!customer.lockStatus && permissionListRef?.validateOwnerUser"
       @click="handleLock"
     >
-      {{ t('lock') }}
+      {{ t('customer.lock') }}
     </el-button>
-    <el-button v-if="!customer.ownerUserId" type="primary" @click="handleReceive"> {{ t('receive') }}</el-button>
+    <el-button v-if="!customer.ownerUserId" type="primary" @click="handleReceive"> {{ t('customer.receive') }}</el-button>
     <el-button v-if="!customer.ownerUserId" type="primary" @click="handleDistributeForm">
-      {{ t('assign') }}
+      {{ t('customer.assign') }}
     </el-button>
     <el-button
       v-if="customer.ownerUserId && permissionListRef?.validateOwnerUser"
       @click="handlePutPool"
     >
-      {{ t('putPool') }}
+      {{ t('customer.putPool') }}
     </el-button>
   </CustomerDetailsHeader>
+  <el-row class="mb-15px" v-if="customer.tags || allTags.length > 0">
+    <el-col :span="24">
+      <div class="tag-section">
+        <span class="tag-section-label">{{ t('customer.tags') }}：</span>
+        <el-tag
+          v-for="tag in customer.tags"
+          :key="tag.id"
+          :color="tag.color"
+          class="mr-8px mb-4px"
+          closable
+          size="default"
+          @close="handleRemoveTag(tag.id)"
+        >
+          {{ tag.name }}
+        </el-tag>
+        <el-dropdown
+          v-if="permissionListRef?.validateWrite"
+          trigger="click"
+          @command="handleAddTag"
+        >
+          <el-button size="small" type="primary" link>
+            <Icon icon="ep:plus" /> {{ t('customer.addTag') }}
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item
+                v-for="tag in availableTags"
+                :key="tag.id"
+                :command="tag.id"
+              >
+                <el-tag :color="tag.color" size="small">{{ tag.name }}</el-tag>
+              </el-dropdown-item>
+              <el-dropdown-item v-if="availableTags.length === 0" disabled>
+                {{ t('customer.noMoreTags') }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
+    </el-col>
+  </el-row>
   <el-col>
     <el-tabs>
-      <el-tab-pane :label="t('followUpTab')">
+      <el-tab-pane :label="t('customer.followUpTab')">
         <FollowUpList :biz-id="customerId" :biz-type="BizTypeEnum.CRM_CUSTOMER" />
       </el-tab-pane>
-      <el-tab-pane :label="t('basicInfoTab')">
+      <el-tab-pane :label="t('customer.basicInfoTab')">
         <CustomerDetailsInfo :customer="customer" />
       </el-tab-pane>
-      <el-tab-pane :label="t('contactTab')" lazy>
+      <el-tab-pane :label="t('customer.contactTab')" lazy>
         <ContactList
           :biz-id="customer.id!"
           :customer-id="customer.id!"
           :biz-type="BizTypeEnum.CRM_CUSTOMER"
         />
       </el-tab-pane>
-      <el-tab-pane :label="t('teamMemberTab')">
+      <el-tab-pane :label="t('customer.teamMemberTab')">
         <PermissionList
           ref="permissionListRef"
           :biz-id="customer.id!"
@@ -61,21 +102,30 @@
           @quit-team="close"
         />
       </el-tab-pane>
-      <el-tab-pane :label="t('businessTab')" lazy>
+      <el-tab-pane :label="t('customer.businessTab')" lazy>
         <BusinessList
           :biz-id="customer.id!"
           :customer-id="customer.id!"
           :biz-type="BizTypeEnum.CRM_CUSTOMER"
         />
       </el-tab-pane>
-      <el-tab-pane :label="t('contractTab')" lazy>
+      <el-tab-pane :label="t('customer.contractTab')" lazy>
         <ContractList :biz-id="customer.id!" :biz-type="BizTypeEnum.CRM_CUSTOMER" />
       </el-tab-pane>
-      <el-tab-pane :label="t('receivableTab')" lazy>
+      <el-tab-pane :label="t('customer.receivableTab')" lazy>
         <ReceivablePlanList :customer-id="customer.id!" @create-receivable="createReceivable" />
         <ReceivableList ref="receivableListRef" :customer-id="customer.id!" />
       </el-tab-pane>
-      <el-tab-pane :label="t('operateLogTab')">
+      <el-tab-pane :label="t('customer.orderTab')" lazy>
+        <OrderList :biz-type="BizTypeEnum.CRM_CUSTOMER" :biz-id="customer.id!" />
+      </el-tab-pane>
+      <el-tab-pane :label="t('customer.taskTab')" lazy>
+        <TaskList :customer-id="customer.id!" />
+      </el-tab-pane>
+      <el-tab-pane :label="t('customer.attachmentTab')" lazy>
+        <AttachmentList :customer-id="customer.id!" />
+      </el-tab-pane>
+      <el-tab-pane :label="t('customer.operateLogTab')">
         <OperateLogV2 :log-list="logList" />
       </el-tab-pane>
     </el-tabs>
@@ -89,6 +139,7 @@
 <script lang="ts" setup>
 import { useTagsViewStore } from '@/store/modules/tagsView'
 import * as CustomerApi from '@/api/crm/customer'
+import * as TagApi from '@/api/crm/tag'
 import CustomerForm from '@/views/crm/customer/CustomerForm.vue'
 import CustomerDetailsInfo from './CustomerDetailsInfo.vue' // 客户明细 - 详细信息
 import CustomerDetailsHeader from './CustomerDetailsHeader.vue' // 客户明细 - 头部
@@ -100,6 +151,9 @@ import ReceivablePlanList from '@/views/crm/receivable/plan/components/Receivabl
 import PermissionList from '@/views/crm/permission/components/PermissionList.vue' // 团队成员列表（权限）
 import CrmTransferForm from '@/views/crm/permission/components/TransferForm.vue'
 import FollowUpList from '@/views/crm/followup/index.vue'
+import OrderList from '@/views/crm/order/components/OrderList.vue' // 订单列表
+import TaskList from './TaskList.vue' // 任务列表
+import AttachmentList from './AttachmentList.vue' // 附件列表
 import { BizTypeEnum } from '@/api/crm/permission'
 import type { OperateLogVO } from '@/api/system/operatelog'
 import { getOperateLogPage } from '@/api/crm/operateLog'
@@ -110,7 +164,7 @@ defineOptions({ name: 'CrmCustomerDetail' })
 const customerId = ref(0) // 客户编号
 const loading = ref(true) // 加载中
 const message = useMessage() // 消息弹窗
-const { t } = useI18n('crm.customer') // 国际化
+const { t } = useI18n('crm') // 国际化
 const { delView } = useTagsViewStore() // 视图操作
 const { push, currentRoute } = useRouter() // 路由
 
@@ -123,9 +177,53 @@ const getCustomer = async () => {
   try {
     customer.value = await CustomerApi.getCustomer(customerId.value)
     await getOperateLog()
+    await loadCustomerTags()
   } finally {
     loading.value = false
   }
+}
+
+/** 标签相关 */
+const allTags = ref<TagApi.TagVO[]>([]) // 所有标签
+const customerTags = ref<TagApi.TagVO[]>([]) // 当前客户标签
+
+// 可添加的标签（未被打标的）
+const availableTags = computed(() => {
+  const existingIds = new Set((customer.value.tags || []).map((t: TagApi.TagVO) => t.id))
+  return allTags.value.filter((t) => !existingIds.has(t.id))
+})
+
+const loadCustomerTags = async () => {
+  try {
+    customerTags.value = await TagApi.getCustomerTags(customerId.value)
+    customer.value.tags = customerTags.value
+  } catch {
+    customer.value.tags = []
+  }
+}
+
+const loadAllTags = async () => {
+  try {
+    allTags.value = await TagApi.getAllTags()
+  } catch {
+    allTags.value = []
+  }
+}
+
+const handleRemoveTag = async (tagId: number) => {
+  try {
+    await TagApi.removeCustomerTag(customerId.value, tagId)
+    message.success(t('common.delSuccess'))
+    await loadCustomerTags()
+  } catch {}
+}
+
+const handleAddTag = async (tagId: number) => {
+  try {
+    await TagApi.addCustomerTags(customerId.value, [tagId])
+    message.success(t('common.createSuccess'))
+    await loadCustomerTags()
+  } catch {}
 }
 
 /** 编辑客户 */
@@ -139,10 +237,10 @@ const handleUpdateDealStatus = async () => {
   const dealStatus = !customer.value.dealStatus
   try {
     // 更新状态的二次确认
-    await message.confirm(t('updateDealStatusConfirm', { status: dealStatus ? t('dealStatusYes') : t('dealStatusNo') }))
+    await message.confirm(t('customer.updateDealStatusConfirm', { status: dealStatus ? t('customer.dealStatusYes') : t('customer.dealStatusNo') }))
     // 发起更新
     await CustomerApi.updateCustomerDealStatus(customerId.value, dealStatus)
-    message.success(t('updateDealStatusSuccess'))
+    message.success(t('customer.updateDealStatusSuccess'))
     // 刷新数据
     await getCustomer()
   } catch {}
@@ -156,25 +254,25 @@ const transfer = () => {
 
 /** 锁定客户 */
 const handleLock = async () => {
-  await message.confirm(t('lockConfirm', { name: customer.value.name }))
+  await message.confirm(t('customer.lockConfirm', { name: customer.value.name }))
   await CustomerApi.lockCustomer(unref(customerId.value), true)
-  message.success(t('lockSuccess', { name: customer.value.name }))
+  message.success(t('customer.lockSuccess', { name: customer.value.name }))
   await getCustomer()
 }
 
 /** 解锁客户 */
 const handleUnlock = async () => {
-  await message.confirm(t('unlockConfirm', { name: customer.value.name }))
+  await message.confirm(t('customer.unlockConfirm', { name: customer.value.name }))
   await CustomerApi.lockCustomer(unref(customerId.value), false)
-  message.success(t('unlockSuccess', { name: customer.value.name }))
+  message.success(t('customer.unlockSuccess', { name: customer.value.name }))
   await getCustomer()
 }
 
 /** 领取客户 */
 const handleReceive = async () => {
-  await message.confirm(t('receiveConfirm', { name: customer.value.name }))
+  await message.confirm(t('customer.receiveConfirm', { name: customer.value.name }))
   await CustomerApi.receiveCustomer([unref(customerId.value)])
-  message.success(t('receiveSuccess', { name: customer.value.name }))
+  message.success(t('customer.receiveSuccess', { name: customer.value.name }))
   await getCustomer()
 }
 
@@ -186,9 +284,9 @@ const handleDistributeForm = async () => {
 
 /** 客户放入公海 */
 const handlePutPool = async () => {
-  await message.confirm(t('putPoolConfirm', { name: customer.value.name }))
+  await message.confirm(t('customer.putPoolConfirm', { name: customer.value.name }))
   await CustomerApi.putCustomerPool(unref(customerId.value))
-  message.success(t('putPoolSuccess', { name: customer.value.name }))
+  message.success(t('customer.putPoolSuccess', { name: customer.value.name }))
   // 加载
   close()
 }
@@ -221,11 +319,12 @@ const close = () => {
 const { params } = useRoute()
 onMounted(() => {
   if (!params.id) {
-    message.warning(t('paramError'))
+    message.warning(t('customer.paramError'))
     close()
     return
   }
   customerId.value = params.id as unknown as number
+  loadAllTags()
   getCustomer()
 })
 </script>

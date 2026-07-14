@@ -1,5 +1,6 @@
 package com.meession.etm.module.crm.controller.admin.followup;
 
+import cn.hutool.core.collection.CollUtil;
 import com.meession.etm.framework.common.pojo.CommonResult;
 import com.meession.etm.framework.common.pojo.PageResult;
 import com.meession.etm.framework.common.util.collection.MapUtils;
@@ -77,9 +78,9 @@ public class CrmFollowUpRecordController {
         PageResult<CrmFollowUpRecordDO> pageResult = followUpRecordService.getFollowUpRecordPage(pageReqVO);
         // 1.1 查询联系人和商机
         Map<Long, CrmContactDO> contactMap = contactService.getContactMap(
-                convertSetByFlatMap(pageResult.getList(), item -> item.getContactIds().stream()));
+                convertSetByFlatMap(pageResult.getList(), item -> CollUtil.emptyIfNull(item.getContactIds()).stream()));
         Map<Long, CrmBusinessDO> businessMap = businessService.getBusinessMap(
-                convertSetByFlatMap(pageResult.getList(), item -> item.getBusinessIds().stream()));
+                convertSetByFlatMap(pageResult.getList(), item -> CollUtil.emptyIfNull(item.getBusinessIds()).stream()));
         // 1.2 查询用户
         Map<Long, AdminUserRespDTO> userMap = adminUserApi.getUserMap(
                 convertSet(pageResult.getList(), item -> Long.valueOf(item.getCreator())));
@@ -87,14 +88,46 @@ public class CrmFollowUpRecordController {
         PageResult<CrmFollowUpRecordRespVO> voPageResult = BeanUtils.toBean(pageResult, CrmFollowUpRecordRespVO.class, record -> {
             // 2.1 设置联系人和商机信息
             record.setBusinesses(new ArrayList<>()).setContacts(new ArrayList<>());
-            record.getContactIds().forEach(id -> MapUtils.findAndThen(contactMap, id, contact ->
+            CollUtil.emptyIfNull(record.getContactIds()).forEach(id -> MapUtils.findAndThen(contactMap, id, contact ->
                     record.getContacts().add(new CrmBusinessRespVO().setId(contact.getId()).setName(contact.getName()))));
-            record.getBusinessIds().forEach(id -> MapUtils.findAndThen(businessMap, id, business ->
+            CollUtil.emptyIfNull(record.getBusinessIds()).forEach(id -> MapUtils.findAndThen(businessMap, id, business ->
                     record.getBusinesses().add(new CrmBusinessRespVO().setId(business.getId()).setName(business.getName()))));
             // 2.2 设置用户信息
             MapUtils.findAndThen(userMap, Long.valueOf(record.getCreator()), user -> record.setCreatorName(user.getNickname()));
         });
         return success(voPageResult);
+    }
+
+    @GetMapping("/task-page")
+    @Operation(summary = "获得任务分页（有下次跟进时间的跟进记录）")
+    public CommonResult<PageResult<CrmFollowUpRecordRespVO>> getTaskPage(@Valid CrmFollowUpRecordPageReqVO pageReqVO) {
+        PageResult<CrmFollowUpRecordDO> pageResult = followUpRecordService.getTaskPage(pageReqVO);
+        // 1.1 查询联系人和商机
+        Map<Long, CrmContactDO> contactMap = contactService.getContactMap(
+                convertSetByFlatMap(pageResult.getList(), item -> CollUtil.emptyIfNull(item.getContactIds()).stream()));
+        Map<Long, CrmBusinessDO> businessMap = businessService.getBusinessMap(
+                convertSetByFlatMap(pageResult.getList(), item -> CollUtil.emptyIfNull(item.getBusinessIds()).stream()));
+        // 1.2 查询用户
+        Map<Long, AdminUserRespDTO> userMap = adminUserApi.getUserMap(
+                convertSet(pageResult.getList(), item -> Long.valueOf(item.getCreator())));
+        // 2. 拼接数据
+        PageResult<CrmFollowUpRecordRespVO> voPageResult = BeanUtils.toBean(pageResult, CrmFollowUpRecordRespVO.class, record -> {
+            // 2.1 设置联系人和商机信息
+            record.setBusinesses(new ArrayList<>()).setContacts(new ArrayList<>());
+            CollUtil.emptyIfNull(record.getContactIds()).forEach(id -> MapUtils.findAndThen(contactMap, id, contact ->
+                    record.getContacts().add(new CrmBusinessRespVO().setId(contact.getId()).setName(contact.getName()))));
+            CollUtil.emptyIfNull(record.getBusinessIds()).forEach(id -> MapUtils.findAndThen(businessMap, id, business ->
+                    record.getBusinesses().add(new CrmBusinessRespVO().setId(business.getId()).setName(business.getName()))));
+            // 2.2 设置用户信息
+            MapUtils.findAndThen(userMap, Long.valueOf(record.getCreator()), user -> record.setCreatorName(user.getNickname()));
+        });
+        return success(voPageResult);
+    }
+
+    @GetMapping("/task-count")
+    @Operation(summary = "获得任务数量")
+    public CommonResult<Long> getTaskCount() {
+        return success(followUpRecordService.getTaskCount());
     }
 
 }

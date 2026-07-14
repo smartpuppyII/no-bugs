@@ -96,3 +96,8 @@ export const getBusinessPageByContact = async (params) => {
 export const transferBusiness = async (data: TransferReqVO) => {
   return await request.put({ url: '/crm/business/transfer', data })
 }
+
+// 批量转移商机
+export const batchTransferBusiness = async (ids: number[], newOwnerUserId: number) => {
+  return await request.put({ url: '/crm/business/batch-transfer', params: { ids: ids.join(','), newOwnerUserId } })
+}

@@ -81,6 +81,10 @@ public class CrmBusinessDO extends BaseDO {
      */
     private Integer endStatus;
     /**
+     * 输单关联竞品编号
+     */
+    private Long loseCompetitorId;
+    /**
      * 结束时的备注
      */
     private String endRemark;

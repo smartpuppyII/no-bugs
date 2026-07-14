@@ -66,6 +66,16 @@ public interface CrmCustomerMapper extends BaseMapperX<CrmCustomerDO> {
                 .eqIfPresent(CrmCustomerDO::getSource, pageReqVO.getSource())
                 .eqIfPresent(CrmCustomerDO::getFollowUpStatus, pageReqVO.getFollowUpStatus());
 
+        // 标签筛选
+        if (cn.hutool.core.collection.CollUtil.isNotEmpty(pageReqVO.getTagIds())) {
+            String tagIdsStr = pageReqVO.getTagIds().stream()
+                    .map(String::valueOf)
+                    .reduce((a, b) -> a + "," + b).orElse("");
+            query.exists("SELECT 1 FROM crm_customer_tag "
+                    + "WHERE crm_customer_tag.customer_id = crm_customer.id "
+                    + "AND crm_customer_tag.tag_id IN (" + tagIdsStr + ")");
+        }
+
         // backlog 查询
         if (ObjUtil.isNotNull(pageReqVO.getContactStatus())) {
             Assert.isNull(pageReqVO.getPool(), "pool 必须是 null");

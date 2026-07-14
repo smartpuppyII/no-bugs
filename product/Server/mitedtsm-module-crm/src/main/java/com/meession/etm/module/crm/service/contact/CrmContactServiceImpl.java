@@ -10,6 +10,7 @@ import com.meession.etm.module.crm.controller.admin.contact.vo.CrmContactSaveReq
 import com.meession.etm.module.crm.controller.admin.contact.vo.CrmContactTransferReqVO;
 import com.meession.etm.module.crm.dal.dataobject.contact.CrmContactBusinessDO;
 import com.meession.etm.module.crm.dal.dataobject.contact.CrmContactDO;
+import com.meession.etm.module.crm.dal.dataobject.transfer.CrmTransferLogDO;
 import com.meession.etm.module.crm.dal.mysql.contact.CrmContactMapper;
 import com.meession.etm.module.crm.enums.common.CrmBizTypeEnum;
 import com.meession.etm.module.crm.enums.permission.CrmPermissionLevelEnum;
@@ -20,6 +21,7 @@ import com.meession.etm.module.crm.service.customer.CrmCustomerService;
 import com.meession.etm.module.crm.service.permission.CrmPermissionService;
 import com.meession.etm.module.crm.service.permission.bo.CrmPermissionCreateReqBO;
 import com.meession.etm.module.crm.service.permission.bo.CrmPermissionTransferReqBO;
+import com.meession.etm.module.crm.service.transfer.CrmTransferLogService;
 import com.meession.etm.module.system.api.user.AdminUserApi;
 import com.mzt.logapi.context.LogRecordContext;
 import com.mzt.logapi.service.impl.DiffParseFunction;
@@ -55,6 +57,7 @@ public class CrmContactServiceImpl implements CrmContactService {
     private CrmContactMapper contactMapper;
 
     @Resource
+    @Lazy // 延迟加载，避免循环依赖
     private CrmCustomerService customerService;
     @Resource
     private CrmPermissionService permissionService;
@@ -64,7 +67,11 @@ public class CrmContactServiceImpl implements CrmContactService {
     @Resource
     private CrmContactBusinessService contactBusinessService;
     @Resource
+    @Lazy // 延迟加载，避免循环依赖
     private CrmBusinessService businessService;
+
+    @Resource
+    private CrmTransferLogService transferLogService;
 
     @Resource
     private AdminUserApi adminUserApi;
@@ -193,6 +200,19 @@ public class CrmContactServiceImpl implements CrmContactService {
 
         // 3. 记录转移日志
         LogRecordContext.putVariable("contact", contact);
+
+        // 4. 记录手动转移日志
+        CrmTransferLogDO transferLog = CrmTransferLogDO.builder()
+                .bizType(CrmBizTypeEnum.CRM_CONTACT.getType())
+                .bizId(contact.getId())
+                .bizName(contact.getName())
+                .fromUserId(contact.getOwnerUserId())
+                .toUserId(reqVO.getNewOwnerUserId())
+                .transferType(1)
+                .remark("手动转移")
+                .createTime(LocalDateTime.now())
+                .build();
+        transferLogService.createTransferLog(transferLog);
     }
 
     @Override

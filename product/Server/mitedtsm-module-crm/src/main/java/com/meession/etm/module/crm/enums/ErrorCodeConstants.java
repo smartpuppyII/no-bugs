@@ -105,4 +105,15 @@ public interface ErrorCodeConstants {
 
     // ========== 数据统计 1_020_014_000 ==========
 
+    // ========== 订单管理 1_020_015_000 ==========
+    ErrorCode ORDER_NOT_EXISTS = new ErrorCode(1_020_015_000, "订单不存在");
+    ErrorCode ORDER_UPDATE_FAIL_NOT_DRAFT = new ErrorCode(1_020_015_001, "订单更新失败，原因：订单不是草稿状态");
+    ErrorCode ORDER_SUBMIT_FAIL_NOT_DRAFT = new ErrorCode(1_020_015_002, "订单提交审核失败，原因：订单没处在未提交状态");
+    ErrorCode ORDER_UPDATE_AUDIT_STATUS_FAIL_NOT_PROCESS = new ErrorCode(1_020_015_003, "更新订单审核状态失败，原因：订单不是审核中状态");
+    ErrorCode ORDER_NO_EXISTS = new ErrorCode(1_020_015_004, "生成订单序列号重复，请重试");
+    ErrorCode ORDER_DELETE_FAIL = new ErrorCode(1_020_015_005, "删除订单失败，原因：有被回款所使用");
+
+    // ========== 竞争对手 模块 ==========
+    ErrorCode COMPETITOR_NOT_EXISTS = new ErrorCode(1_020_016_000, "竞争对手不存在");
+
 }

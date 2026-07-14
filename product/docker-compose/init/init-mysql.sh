@@ -35,37 +35,43 @@ for sql_file in "${SQL_BASE_DIR}"/*.sql; do
     fi
 done
 
-# 4. 执行 new 目录下的 SQL 文件（按依赖顺序）
+# 4. 执行 new 目录下的 SQL 文件（先按依赖顺序执行核心文件，再遍历其余文件）
 if [ -d "$SQL_NEW_DIR" ]; then
-    # 4.1 先执行 new-i18n.sql（创建基础表 system_menu_i18n）
-    if [ -f "${SQL_NEW_DIR}/new-i18n.sql" ]; then
-        echo "Executing: new-i18n.sql"
-        mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" "${MYSQL_DATABASE}" < "${SQL_NEW_DIR}/new-i18n.sql"
-    fi
+    # 已手动指定顺序的文件列表（按依赖关系排列）
+    PRIORITY_FILES=(
+        "new-i18n.sql"                    # 1. 基础表 system_menu_i18n
+        "new-mall-i18n.sql"               # 2. promotion_diy_menu_i18n 表
+        "new-i18n-ar.sql"                 # 3. 多语言数据（依赖 system_menu_i18n）
+        "new-product-category-i18n.sql"   # 4. 产品分类国际化
+        "new-large-file-upload.sql"       # 5. 大文件上传
+    )
 
-    # 4.2 再执行 new-mall-i18n.sql（创建 promotion_diy_menu_i18n 表，修改 system_tenant 表添加 currency_code）
-    if [ -f "${SQL_NEW_DIR}/new-mall-i18n.sql" ]; then
-        echo "Executing: new-mall-i18n.sql"
-        mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" "${MYSQL_DATABASE}" < "${SQL_NEW_DIR}/new-mall-i18n.sql"
-    fi
+    # 先按依赖顺序执行核心文件
+    for filename in "${PRIORITY_FILES[@]}"; do
+        if [ -f "${SQL_NEW_DIR}/${filename}" ]; then
+            echo "Executing: ${filename}"
+            mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" "${MYSQL_DATABASE}" < "${SQL_NEW_DIR}/${filename}"
+        fi
+    done
 
-    # 4.3 执行 new-i18n-ar.sql（插入多语言数据，依赖 system_menu_i18n 表存在）
-    if [ -f "${SQL_NEW_DIR}/new-i18n-ar.sql" ]; then
-        echo "Executing: new-i18n-ar.sql"
-        mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" "${MYSQL_DATABASE}" < "${SQL_NEW_DIR}/new-i18n-ar.sql"
-    fi
-
-    # 4.4 执行 new-product-category-i18n.sql
-    if [ -f "${SQL_NEW_DIR}/new-product-category-i18n.sql" ]; then
-        echo "Executing: new-product-category-i18n.sql"
-        mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" "${MYSQL_DATABASE}" < "${SQL_NEW_DIR}/new-product-category-i18n.sql"
-    fi
-
-    # 4.5 执行 new-large-file-upload.sql
-    if [ -f "${SQL_NEW_DIR}/new-large-file-upload.sql" ]; then
-        echo "Executing: new-large-file-upload.sql"
-        mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" "${MYSQL_DATABASE}" < "${SQL_NEW_DIR}/new-large-file-upload.sql"
-    fi
+    # 再遍历执行其余 SQL 文件（按文件名排序，排除已执行的）
+    for sql_file in "${SQL_NEW_DIR}"/*.sql; do
+        if [ -f "$sql_file" ]; then
+            filename=$(basename "$sql_file")
+            # 跳过已在 PRIORITY_FILES 中执行过的文件
+            skip=0
+            for pf in "${PRIORITY_FILES[@]}"; do
+                if [[ "$filename" == "$pf" ]]; then
+                    skip=1
+                    break
+                fi
+            done
+            if [ $skip -eq 0 ]; then
+                echo "Executing: ${filename}"
+                mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" "${MYSQL_DATABASE}" < "$sql_file"
+            fi
+        fi
+    done
 fi
 
 echo "MySQL initialization completed successfully!"

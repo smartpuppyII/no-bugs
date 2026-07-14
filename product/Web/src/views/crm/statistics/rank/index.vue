@@ -10,7 +10,7 @@
     >
       <el-row :gutter="20">
         <el-col :span="8">
-          <el-form-item :label="t('timeRange')" prop="orderDate">
+          <el-form-item :label="t('statistics.timeRange')" prop="orderDate">
             <el-date-picker
               v-model="queryParams.times"
               :shortcuts="defaultShortcuts"
@@ -24,14 +24,14 @@
           </el-form-item>
         </el-col>
         <el-col :span="8">
-          <el-form-item :label="t('dept')" prop="deptId">
+          <el-form-item :label="t('statistics.dept')" prop="deptId">
             <el-tree-select
               v-model="queryParams.deptId"
               :data="deptList"
               :props="defaultProps"
               check-strictly
               node-key="id"
-              :placeholder="t('dept')"
+              :placeholder="t('statistics.dept')"
               class="!w-240px"
             />
           </el-form-item>
@@ -40,8 +40,8 @@
       <el-row>
         <el-col :span="24">
           <el-form-item>
-            <el-button @click="handleQuery"><Icon icon="ep:search" class="mr-5px" /> {{ t('search') }}</el-button>
-            <el-button @click="resetQuery"><Icon icon="ep:refresh" class="mr-5px" /> {{ t('reset') }}</el-button>
+            <el-button @click="handleQuery"><Icon icon="ep:search" class="mr-5px" /> {{ t('statistics.search') }}</el-button>
+            <el-button @click="resetQuery"><Icon icon="ep:refresh" class="mr-5px" /> {{ t('statistics.reset') }}</el-button>
           </el-form-item>
         </el-col>
       </el-row>
@@ -51,36 +51,35 @@
   <!-- 排行数据 -->
   <el-col>
     <el-tabs v-model="activeTab">
-      <!-- 合同金额排行 -->
-      <el-tab-pane :label="t('rank.contractPrice')" name="contractPriceRank" lazy>
+      <el-tab-pane :label="t('statistics.rank.contractPrice')" name="contractPriceRank" lazy>
         <ContractPriceRank :query-params="queryParams" ref="contractPriceRankRef" />
       </el-tab-pane>
       <!-- 回款金额排行 -->
-      <el-tab-pane :label="t('rank.receivablePrice')" name="receivablePriceRank" lazy>
+      <el-tab-pane :label="t('statistics.rank.receivablePrice')" name="receivablePriceRank" lazy>
         <ReceivablePriceRank :query-params="queryParams" ref="receivablePriceRankRef" />
       </el-tab-pane>
       <!-- 签约合同排行 -->
-      <el-tab-pane :label="t('rank.contractCount')" name="contractCountRank" lazy>
+      <el-tab-pane :label="t('statistics.rank.contractCount')" name="contractCountRank" lazy>
         <ContractCountRank :query-params="queryParams" ref="contractCountRankRef" />
       </el-tab-pane>
       <!-- 产品销量排行 -->
-      <el-tab-pane :label="t('rank.productSales')" name="productSalesRank" lazy>
+      <el-tab-pane :label="t('statistics.rank.productSales')" name="productSalesRank" lazy>
         <ProductSalesRank :query-params="queryParams" ref="productSalesRankRef" />
       </el-tab-pane>
       <!-- 新增客户数排行 -->
-      <el-tab-pane :label="t('rank.customerCount')" name="customerCountRank" lazy>
+      <el-tab-pane :label="t('statistics.rank.customerCount')" name="customerCountRank" lazy>
         <CustomerCountRank :query-params="queryParams" ref="customerCountRankRef" />
       </el-tab-pane>
       <!-- 新增联系人数排行 -->
-      <el-tab-pane :label="t('rank.contactCount')" name="contactCountRank" lazy>
+      <el-tab-pane :label="t('statistics.rank.contactCount')" name="contactCountRank" lazy>
         <ContactCountRank :query-params="queryParams" ref="contactCountRankRef" />
       </el-tab-pane>
       <!-- 跟进次数排行 -->
-      <el-tab-pane :label="t('rank.followCount')" name="followCountRank" lazy>
+      <el-tab-pane :label="t('statistics.rank.followCount')" name="followCountRank" lazy>
         <FollowCountRank :query-params="queryParams" ref="followCountRankRef" />
       </el-tab-pane>
       <!-- 跟进客户数排行 -->
-      <el-tab-pane :label="t('rank.followCustomerCount')" name="followCustomerCountRank" lazy>
+      <el-tab-pane :label="t('statistics.rank.followCustomerCount')" name="followCustomerCountRank" lazy>
         <FollowCustomerCountRank :query-params="queryParams" ref="followCustomerCountRankRef" />
       </el-tab-pane>
     </el-tabs>
@@ -102,7 +101,7 @@ import { useUserStore } from '@/store/modules/user'
 
 defineOptions({ name: 'CrmStatisticsRank' })
 
-const { t } = useI18n('crm.statistics') // 国际化
+const { t } = useI18n('crm') // 国际化
 
 const queryParams = reactive({
   deptId: useUserStore().getUser.deptId,

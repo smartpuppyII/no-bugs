@@ -55,4 +55,7 @@ public class CrmCustomerPageReqVO extends PageParam {
     @Schema(description = "跟进状态", example = "true")
     private Boolean followUpStatus;
 
+    @Schema(description = "标签ID列表", example = "[1, 2, 3]")
+    private java.util.List<Long> tagIds;
+
 }

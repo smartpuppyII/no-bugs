@@ -68,6 +68,10 @@ export default {
     poolDay: '距离进入公海天数',
     ownerUserDeptName: '所属部门',
     dayUnit: '天',
+    tags: '标签',
+    tagsPlaceholder: '请选择标签',
+    addTag: '添加标签',
+    noMoreTags: '没有更多标签',
     exportFileName: '客户',
     poolExportFileName: '客户公海',
     // Tab标签
@@ -90,6 +94,9 @@ export default {
     contractTab: '合同',
     receivableTab: '回款',
     operateLogTab: '操作日志',
+    orderTab: '订单',
+    taskTab: '任务',
+    attachmentTab: '附件',
     // 确认消息
     updateDealStatusConfirm: '确定更新成交状态为【{status}】吗？',
     updateDealStatusSuccess: '更新成交状态成功',
@@ -135,7 +142,16 @@ export default {
       notifyDaysBefore: '提前',
       notifyDaysAfter: '天提醒',
       enabledRequired: '是否启用客户公海不能为空'
-    }
+    },
+    // 批量操作
+    batchLock: '批量锁定',
+    batchUnlock: '批量解锁',
+    batchTag: '批量打标',
+    batchAssign: '批量分配',
+    batchPutPool: '批量放入公海',
+    batchReceive: '批量领取',
+    batchPutPoolConfirm: '确认将选中的 {count} 个客户放入公海？',
+    batchReceiveConfirm: '确认领取选中的 {count} 个客户？'
   },
   contact: {
     title: '联系人',
@@ -203,7 +219,10 @@ export default {
     teamMemberTab: '团队成员',
     businessTab: '商机',
     // 弹窗
-    relateTitle: '关联联系人'
+    relateTitle: '关联联系人',
+    // 批量操作
+    batchDelete: '批量删除',
+    batchDeleteConfirm: '确认删除选中的 {count} 个联系人？'
   },
   business: {
     title: '商机管理',
@@ -295,7 +314,75 @@ export default {
     winRatePercent: '赢单率（%）',
     statusNamePlaceholder: '请输入状态名称',
     winRatePlaceholder: '请输入赢单率',
-    statusNameRequired: '状态组名不能为空'
+    statusNameRequired: '状态组名不能为空',
+    // 批量操作
+    batchTransfer: '批量转移'
+  },
+  order: {
+    title: '订单管理',
+    name: '订单标题',
+    no: '订单编号',
+    customerId: '关联客户',
+    customerName: '客户名称',
+    businessId: '关联商机',
+    businessName: '商机名称',
+    orderDate: '签单日期',
+    startTime: '开始日期',
+    endTime: '到期日期',
+    orderType: '订单类型',
+    paymentMethod: '付款方式',
+    totalProductPrice: '产品总金额',
+    discountPercent: '整单折扣(%)',
+    totalPrice: '订单总金额',
+    totalReceivablePrice: '已回款金额',
+    unreceivablePrice: '剩余回款金额',
+    signContactId: '客户签约人',
+    signContactName: '客户签约人',
+    signUserId: '我方签约人',
+    signUserName: '我方签约人',
+    remark: '备注',
+    ownerUserId: '负责人',
+    ownerUserName: '负责人',
+    ownerUserDeptName: '负责人部门',
+    contactLastTime: '最后跟进时间',
+    createTime: '创建时间',
+    updateTime: '更新时间',
+    creatorName: '创建人',
+    auditStatus: '审批状态',
+    orderPrice: '订单价格',
+    orderPriceRequired: '订单价格不能为空',
+    // 占位符
+    namePlaceholder: '请输入订单标题',
+    noPlaceholder: '请输入订单编号',
+    customerIdPlaceholder: '请选择客户',
+    businessIdPlaceholder: '请选择商机',
+    orderDatePlaceholder: '选择签单日期',
+    startTimePlaceholder: '选择开始日期',
+    endTimePlaceholder: '选择到期日期',
+    remarkPlaceholder: '请输入备注',
+    noAutoGenerate: '保存时自动生成',
+    // 验证消息
+    nameRequired: '订单标题不能为空',
+    customerIdRequired: '客户不能为空',
+    orderDateRequired: '签单日期不能为空',
+    ownerUserRequired: '负责人不能为空',
+    // 操作按钮
+    createOrder: '创建订单',
+    submitAudit: '提交审核',
+    submitAuditConfirm: '确认提交订单【{name}】的审核吗？',
+    submitAuditSuccess: '提交审核成功',
+    viewApproval: '查看审批',
+    // Tab 标签
+    followUpTab: '跟进记录',
+    basicInfoTab: '详细资料',
+    operateLogTab: '操作日志',
+    teamMemberTab: '团队成员',
+    productTab: '产品',
+    // 产品相关
+    productList: '产品清单',
+    // 弹窗
+    save: '保存',
+    paramError: '参数错误，订单不能为空！'
   },
   contract: {
     title: '合同管理',
@@ -548,7 +635,28 @@ export default {
     basicInfoTab: '详细资料',
     followUpTab: '跟进记录',
     operateLogTab: '操作日志',
-    teamMemberTab: '团队成员'
+    teamMemberTab: '团队成员',
+    // 公海池
+    pool: '公海池',
+    receive: '领取线索',
+    receiveConfirm: '确定领取线索【{name}】吗？',
+    receiveSuccess: '领取线索【{name}】成功',
+    assignTitle: '分配线索',
+    assignSuccess: '分配线索成功',
+    putPool: '放入公海',
+    putPoolConfirm: '确定将线索【{name}】放入公海吗？放入公海后，其他同事可以领取该线索。',
+    putPoolSuccess: '线索【{name}】已放入公海',
+    // 批量操作
+    batchAssign: '批量分配',
+    batchTransform: '批量转为客户',
+    batchDelete: '批量删除',
+    batchDeleteConfirm: '确认删除选中的 {count} 条线索？',
+    batchTransformConfirm: '确认将选中的 {count} 条线索转为客户？'
+  },
+  task: {
+    title: '任务管理',
+    customerName: '关联客户',
+    onlyUpcoming: '仅显示近期任务'
   },
   permission: {
     title: '团队成员',
@@ -832,5 +940,112 @@ export default {
     count: '数量',
     amount: '金额',
     ratio: '占比'
+  },
+  // CRM 工作台
+  dashboard: {
+    title: 'CRM工作台',
+    quickLinks: '快捷入口',
+    newCustomer: '新增客户',
+    newClue: '新增线索',
+    newBusiness: '新增商机',
+    newContract: '新增合同',
+    backlog: '待办事项',
+    customerMgmt: '客户管理'
+  },
+  // 离职交接
+  handover: {
+    title: '离职交接管理',
+    step1: '步骤一：选择离职人员',
+    step2: '步骤二：预览数据 & 指定接收人',
+    selectDepartingUser: '离职人员',
+    departingUser: '离职人员',
+    selectUserPlaceholder: '请选择离职人员',
+    previewData: '预览名下数据',
+    dataType: '数据类型',
+    dataCount: '数据量',
+    receiver: '接收人',
+    receiverPlaceholder: '选择接收人（留空则不转移）',
+    remark: '交接备注',
+    remarkPlaceholder: '如：张三离职，交接给李四',
+    confirmExecute: '确认执行交接',
+    transferLog: '转移日志',
+    bizName: '业务名称',
+    bizType: '业务类型',
+    fromUser: '原负责人',
+    toUser: '新负责人',
+    transferType: '转移类型',
+    remarkCol: '备注',
+    createTime: '创建时间',
+    confirmMessage: '确认执行离职交接？此操作将转移所有名下数据。',
+    executeSuccess: '交接完成',
+    customerData: '客户',
+    clueData: '线索',
+    businessData: '商机',
+    contractData: '合同',
+    contactData: '联系人',
+    receivablePlanData: '回款计划',
+    manualTransfer: '手动转移',
+    departureTransfer: '离职交接',
+    systemAuto: '系统自动',
+    totalCount: '共 {count} 条'
+  },
+  // 批量操作
+  batch: {
+    select: '选择',
+    batchDelete: '批量删除',
+    batchLock: '批量锁定',
+    batchUnlock: '批量解锁',
+    batchTag: '批量打标',
+    batchAssign: '批量分配',
+    batchPutPool: '批量放入公海',
+    batchTransform: '批量转为客户',
+    batchTransfer: '批量转移',
+    batchReceive: '批量领取',
+    selectedCount: '已选择 {count} 条记录',
+    confirmDelete: '确认删除选中的 {count} 条记录？',
+    confirmLock: '确认锁定选中的 {count} 条记录？',
+    confirmUnlock: '确认解锁选中的 {count} 条记录？',
+    confirmAssign: '确认将选中的 {count} 条记录分配给新负责人？',
+    confirmPutPool: '确认将选中的 {count} 条记录放入公海？',
+    confirmTransform: '确认将选中的 {count} 条线索转为客户？',
+    confirmTransfer: '确认转移选中的 {count} 条记录？',
+    success: '批量操作成功',
+    batchPutPoolConfirm: '确认将选中的 {count} 个客户放入公海？',
+    batchReceiveConfirm: '确认领取选中的 {count} 个客户？'
+  },
+  // 批量操作通用组件
+  common: {
+    batchAssignTitle: '批量分配',
+    selectedCount: '已选择 {count} 条记录',
+    assignToUser: '分配给',
+    assignToUserPlaceholder: '请选择新负责人',
+    pleaseSelectUser: '请选择负责人',
+    batchTagTitle: '批量打标',
+    tags: '标签',
+    tagPlaceholder: '请选择标签',
+    pleaseSelect: '请选择',
+    pleaseSelectTag: '请选择至少一个标签',
+    batchConfirmMsg: '确认对选中的 {count} 条记录执行【{operation}】操作？'
+  },
+  // 查重
+  duplicate: {
+    title: '查重管理',
+    config: '查重配置',
+    checkName: '检查客户名称',
+    checkMobile: '检查手机号',
+    checkEmail: '检查邮箱',
+    checkWechat: '检查微信',
+    checkScope: '查重范围',
+    scopeAll: '全公司',
+    scopeDept: '本部门',
+    scopeSelf: '仅自己',
+    duplicateFound: '发现可能的重复客户',
+    matchField: '匹配字段',
+    matchValue: '匹配值',
+    viewExisting: '查看已有客户',
+    createAnyway: '仍然新建',
+    merge: '合并',
+    mergeConfirm: '确认将客户"{source}"合并到"{target}"？此操作不可撤销。',
+    noDuplicate: '未发现重复客户'
   }
 }

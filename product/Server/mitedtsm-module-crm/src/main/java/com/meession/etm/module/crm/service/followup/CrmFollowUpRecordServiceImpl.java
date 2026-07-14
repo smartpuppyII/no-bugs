@@ -146,4 +146,14 @@ public class CrmFollowUpRecordServiceImpl implements CrmFollowUpRecordService {
         return crmFollowUpRecordMapper.selectListByBiz(bizType, bizIds);
     }
 
+    @Override
+    public PageResult<CrmFollowUpRecordDO> getTaskPage(CrmFollowUpRecordPageReqVO pageReqVO) {
+        return crmFollowUpRecordMapper.selectTaskPage(pageReqVO);
+    }
+
+    @Override
+    public Long getTaskCount() {
+        return crmFollowUpRecordMapper.selectTaskCount();
+    }
+
 }

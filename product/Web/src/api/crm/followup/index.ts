@@ -39,5 +39,15 @@ export const FollowUpRecordApi = {
   // 删除跟进记录
   deleteFollowUpRecord: async (id: number) => {
     return await request.delete({ url: `/crm/follow-up-record/delete?id=` + id })
+  },
+
+  // 查询任务分页（跟进记录中有下次联系时间的）
+  getTaskPage: async (params: any) => {
+    return await request.get({ url: `/crm/follow-up-record/task-page`, params })
+  },
+
+  // 获取任务数量
+  getTaskCount: async () => {
+    return await request.get({ url: `/crm/follow-up-record/task-count` })
   }
 }

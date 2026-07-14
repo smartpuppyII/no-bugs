@@ -17,6 +17,9 @@ import com.meession.etm.module.crm.dal.dataobject.customer.CrmCustomerDO;
 import com.meession.etm.module.crm.dal.dataobject.customer.CrmCustomerPoolConfigDO;
 import com.meession.etm.module.crm.service.customer.CrmCustomerPoolConfigService;
 import com.meession.etm.module.crm.service.customer.CrmCustomerService;
+import com.meession.etm.module.crm.service.tag.CrmTagService;
+import com.meession.etm.module.crm.service.duplicate.CrmCustomerDuplicateService;
+import com.meession.etm.module.crm.controller.admin.tag.vo.CrmTagRespVO;
 import com.meession.etm.module.system.api.dept.DeptApi;
 import com.meession.etm.module.system.api.dept.dto.DeptRespDTO;
 import com.meession.etm.module.system.api.user.AdminUserApi;
@@ -37,6 +40,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 import java.util.stream.Stream;
 
 import static com.meession.etm.framework.apilog.core.enums.OperateTypeEnum.EXPORT;
@@ -61,6 +65,10 @@ public class CrmCustomerController {
     private DeptApi deptApi;
     @Resource
     private AdminUserApi adminUserApi;
+    @Resource
+    private CrmTagService tagService;
+    @Resource
+    private CrmCustomerDuplicateService customerDuplicateService;
 
     @PostMapping("/create")
     @Operation(summary = "创建客户")
@@ -140,7 +148,7 @@ public class CrmCustomerController {
         // 1.2 获取距离进入公海的时间
         Map<Long, Long> poolDayMap = getPoolDayMap(list);
         // 2. 转换成 VO
-        return BeanUtils.toBean(list, CrmCustomerRespVO.class, customerVO -> {
+        List<CrmCustomerRespVO> resultList = BeanUtils.toBean(list, CrmCustomerRespVO.class, customerVO -> {
             customerVO.setAreaName(AreaUtils.format(customerVO.getAreaId()));
             // 2.1 设置创建人、负责人名称
             MapUtils.findAndThen(userMap, NumberUtils.parseLong(customerVO.getCreator()),
@@ -154,6 +162,36 @@ public class CrmCustomerController {
                 customerVO.setPoolDay(poolDayMap.get(customerVO.getId()));
             }
         });
+        // 3. 批量设置客户标签
+        List<Long> customerIds = convertList(resultList, CrmCustomerRespVO::getId);
+        if (CollUtil.isNotEmpty(customerIds)) {
+            List<com.meession.etm.module.crm.dal.dataobject.tag.CrmCustomerTagDO> tagRelations =
+                    tagService.getCustomerTagsByCustomerIds(customerIds);
+            if (CollUtil.isNotEmpty(tagRelations)) {
+                // 3.1 获取所有标签定义
+                List<Long> tagIds = new java.util.ArrayList<>(convertSet(tagRelations,
+                        com.meession.etm.module.crm.dal.dataobject.tag.CrmCustomerTagDO::getTagId));
+                Map<Long, com.meession.etm.module.crm.dal.dataobject.tag.CrmTagDO> tagMap = convertMap(
+                        tagService.getAllTags(),
+                        com.meession.etm.module.crm.dal.dataobject.tag.CrmTagDO::getId,
+                        tag -> tag);
+                // 3.2 构建客户ID -> 标签列表的映射
+                Map<Long, List<CrmTagRespVO>> customerTagMap = new java.util.HashMap<>();
+                for (com.meession.etm.module.crm.dal.dataobject.tag.CrmCustomerTagDO relation : tagRelations) {
+                    com.meession.etm.module.crm.dal.dataobject.tag.CrmTagDO tag = tagMap.get(relation.getTagId());
+                    if (tag != null) {
+                        customerTagMap.computeIfAbsent(relation.getCustomerId(),
+                                k -> new java.util.ArrayList<>())
+                                .add(BeanUtils.toBean(tag, CrmTagRespVO.class));
+                    }
+                }
+                // 3.3 设置到每个VO上
+                for (CrmCustomerRespVO vo : resultList) {
+                    vo.setTags(customerTagMap.getOrDefault(vo.getId(), java.util.Collections.emptyList()));
+                }
+            }
+        }
+        return resultList;
     }
 
     @GetMapping("/put-pool-remind-page")
@@ -310,6 +348,96 @@ public class CrmCustomerController {
     @PreAuthorize("@ss.hasPermission('crm:customer:distribute')")
     public CommonResult<Boolean> distributeCustomer(@Valid @RequestBody CrmCustomerDistributeReqVO distributeReqVO) {
         customerService.receiveCustomer(distributeReqVO.getIds(), distributeReqVO.getOwnerUserId(), Boolean.FALSE);
+        return success(true);
+    }
+
+    // ==================== 查重相关操作 ====================
+
+    @PostMapping("/check-duplicate")
+    @Operation(summary = "检查客户是否重复")
+    public CommonResult<List<Map<String, Object>>> checkDuplicate(@RequestBody Map<String, String> body) {
+        return success(customerDuplicateService.checkDuplicate(
+                body.get("name"), body.get("mobile"), body.get("email"), body.get("wechat"), getLoginUserId()));
+    }
+
+    @GetMapping("/duplicate-list")
+    @Operation(summary = "获得重复客户列表")
+    @PreAuthorize("@ss.hasPermission('crm:customer:query')")
+    public CommonResult<List<List<CrmCustomerRespVO>>> getDuplicateList(
+            @RequestParam(value = "checkName", defaultValue = "true") Boolean checkName,
+            @RequestParam(value = "checkMobile", defaultValue = "true") Boolean checkMobile) {
+        List<List<CrmCustomerDO>> duplicates = customerDuplicateService.findDuplicateCustomers(checkName, checkMobile);
+        List<List<CrmCustomerRespVO>> result = new ArrayList<>();
+        for (List<CrmCustomerDO> group : duplicates) {
+            result.add(buildCustomerDetailList(group));
+        }
+        return success(result);
+    }
+
+    @PostMapping("/merge")
+    @Operation(summary = "合并客户")
+    @PreAuthorize("@ss.hasPermission('crm:customer:update')")
+    public CommonResult<Boolean> mergeCustomer(@RequestParam("sourceId") Long sourceId, @RequestParam("targetId") Long targetId) {
+        customerDuplicateService.mergeCustomers(sourceId, targetId);
+        return success(true);
+    }
+
+    // ==================== 标签相关操作 ====================
+
+    @PostMapping("/tag")
+    @Operation(summary = "为客户添加标签")
+    @PreAuthorize("@ss.hasPermission('crm:customer:update')")
+    public CommonResult<Boolean> addCustomerTag(@RequestParam("customerId") Long customerId, @RequestParam("tagIds") List<Long> tagIds) {
+        tagService.addCustomerTags(customerId, tagIds);
+        return success(true);
+    }
+
+    @DeleteMapping("/tag")
+    @Operation(summary = "移除客户标签")
+    @PreAuthorize("@ss.hasPermission('crm:customer:update')")
+    public CommonResult<Boolean> removeCustomerTag(@RequestParam("customerId") Long customerId, @RequestParam("tagId") Long tagId) {
+        tagService.removeCustomerTag(customerId, tagId);
+        return success(true);
+    }
+
+    @GetMapping("/tags")
+    @Operation(summary = "获得客户标签")
+    @Parameter(name = "customerId", description = "客户编号", required = true)
+    @PreAuthorize("@ss.hasPermission('crm:customer:query')")
+    public CommonResult<List<CrmTagRespVO>> getCustomerTags(@RequestParam("customerId") Long customerId) {
+        return success(BeanUtils.toBean(tagService.getCustomerTags(customerId), CrmTagRespVO.class));
+    }
+
+    @PostMapping("/batch-tag")
+    @Operation(summary = "批量添加客户标签")
+    @PreAuthorize("@ss.hasPermission('crm:customer:update')")
+    public CommonResult<Boolean> batchAddCustomerTag(@RequestParam("customerIds") List<Long> customerIds, @RequestParam("tagIds") List<Long> tagIds) {
+        tagService.batchAddCustomerTags(customerIds, tagIds);
+        return success(true);
+    }
+
+    // ==================== 批量操作 ====================
+
+    @PutMapping("/batch-lock")
+    @Operation(summary = "批量锁定/解锁客户")
+    @PreAuthorize("@ss.hasPermission('crm:customer:update')")
+    public CommonResult<Boolean> batchLockCustomer(@RequestParam("ids") List<Long> ids, @RequestParam("lockStatus") Boolean lockStatus) {
+        for (Long id : ids) {
+            CrmCustomerLockReqVO req = new CrmCustomerLockReqVO();
+            req.setId(id);
+            req.setLockStatus(lockStatus);
+            customerService.lockCustomer(req, getLoginUserId());
+        }
+        return success(true);
+    }
+
+    @PutMapping("/batch-put-pool")
+    @Operation(summary = "批量客户放入公海")
+    @PreAuthorize("@ss.hasPermission('crm:customer:update')")
+    public CommonResult<Boolean> batchPutCustomerPool(@RequestBody List<Long> ids) {
+        for (Long id : ids) {
+            customerService.putCustomerPool(id);
+        }
         return success(true);
     }
 

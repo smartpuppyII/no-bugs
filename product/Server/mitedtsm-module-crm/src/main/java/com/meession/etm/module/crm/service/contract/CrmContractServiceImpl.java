@@ -16,6 +16,7 @@ import com.meession.etm.module.crm.controller.admin.contract.vo.contract.CrmCont
 import com.meession.etm.module.crm.dal.dataobject.contract.CrmContractConfigDO;
 import com.meession.etm.module.crm.dal.dataobject.contract.CrmContractDO;
 import com.meession.etm.module.crm.dal.dataobject.contract.CrmContractProductDO;
+import com.meession.etm.module.crm.dal.dataobject.transfer.CrmTransferLogDO;
 import com.meession.etm.module.crm.dal.mysql.contract.CrmContractMapper;
 import com.meession.etm.module.crm.dal.mysql.contract.CrmContractProductMapper;
 import com.meession.etm.module.crm.dal.redis.no.CrmNoRedisDAO;
@@ -31,6 +32,7 @@ import com.meession.etm.module.crm.service.permission.bo.CrmPermissionCreateReqB
 import com.meession.etm.module.crm.service.permission.bo.CrmPermissionTransferReqBO;
 import com.meession.etm.module.crm.service.product.CrmProductService;
 import com.meession.etm.module.crm.service.receivable.CrmReceivableService;
+import com.meession.etm.module.crm.service.transfer.CrmTransferLogService;
 import com.meession.etm.module.system.api.user.AdminUserApi;
 import com.mzt.logapi.context.LogRecordContext;
 import com.mzt.logapi.service.impl.DiffParseFunction;
@@ -81,16 +83,21 @@ public class CrmContractServiceImpl implements CrmContractService {
     @Resource
     private CrmProductService productService;
     @Resource
+    @Lazy // 延迟加载，避免循环依赖
     private CrmCustomerService customerService;
     @Resource
+    @Lazy // 延迟加载，避免循环依赖
     private CrmBusinessService businessService;
     @Resource
+    @Lazy // 延迟加载，避免循环依赖
     private CrmContactService contactService;
     @Resource
     private CrmContractConfigService contractConfigService;
     @Resource
     @Lazy // 延迟加载，避免循环依赖
     private CrmReceivableService receivableService;
+    @Resource
+    private CrmTransferLogService transferLogService;
     @Resource
     private AdminUserApi adminUserApi;
     @Resource
@@ -268,6 +275,19 @@ public class CrmContractServiceImpl implements CrmContractService {
 
         // 3. 记录转移日志
         LogRecordContext.putVariable("contract", contract);
+
+        // 4. 记录手动转移日志
+        CrmTransferLogDO transferLog = CrmTransferLogDO.builder()
+                .bizType(CrmBizTypeEnum.CRM_CONTRACT.getType())
+                .bizId(contract.getId())
+                .bizName(contract.getName())
+                .fromUserId(contract.getOwnerUserId())
+                .toUserId(reqVO.getNewOwnerUserId())
+                .transferType(1)
+                .remark("手动转移")
+                .createTime(LocalDateTime.now())
+                .build();
+        transferLogService.createTransferLog(transferLog);
     }
 
     @Override

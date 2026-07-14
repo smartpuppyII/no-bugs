@@ -9,6 +9,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
+
+import com.meession.etm.module.crm.controller.admin.tag.vo.CrmTagRespVO;
 
 @Schema(description = "管理后台 - CRM 客户 Response VO")
 @Data
@@ -126,5 +129,8 @@ public class CrmCustomerRespVO {
 
     @Schema(description = "距离加入公海时间", example = "1")
     private Long poolDay;
+
+    @Schema(description = "客户标签列表")
+    private List<CrmTagRespVO> tags;
 
 }

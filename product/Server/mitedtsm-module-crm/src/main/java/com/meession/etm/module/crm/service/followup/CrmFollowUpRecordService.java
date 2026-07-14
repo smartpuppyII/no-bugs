@@ -73,4 +73,19 @@ public interface CrmFollowUpRecordService {
      */
     List<CrmFollowUpRecordDO> getFollowUpRecordByBiz(Integer bizType, Collection<Long> bizIds);
 
+    /**
+     * 获得任务分页（有下次跟进时间的跟进记录）
+     *
+     * @param pageReqVO 分页查询
+     * @return 任务分页
+     */
+    PageResult<CrmFollowUpRecordDO> getTaskPage(CrmFollowUpRecordPageReqVO pageReqVO);
+
+    /**
+     * 获得任务数量
+     *
+     * @return 数量
+     */
+    Long getTaskCount();
+
 }

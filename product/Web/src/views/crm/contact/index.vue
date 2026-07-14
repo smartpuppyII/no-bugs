@@ -114,6 +114,15 @@
               <Icon class="mr-5px" icon="ep:download" />
               {{ t('common.export') }}
             </el-button>
+            <el-button
+              v-hasPermi="['crm:contact:delete']"
+              :disabled="selectionList.length === 0"
+              plain
+              type="danger"
+              @click="handleBatchDelete"
+            >
+              {{ t('crm.contact.batchDelete') }}
+            </el-button>
           </el-form-item>
         </el-col>
       </el-row>
@@ -127,7 +136,8 @@
       <el-tab-pane :label="t('crm.customer.myInvolved')" name="2" />
       <el-tab-pane :label="t('crm.customer.subordinateResponsible')" name="3" />
     </el-tabs>
-    <el-table v-loading="loading" :data="list" :show-overflow-tooltip="true" :stripe="true" :table-layout="'auto'">
+    <el-table v-loading="loading" :data="list" :show-overflow-tooltip="true" :stripe="true" :table-layout="'auto'" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="55" />
       <el-table-column align="center" fixed="left" :label="t('crm.contact.name')" prop="name" min-width="160">
         <template #default="scope">
           <el-link :underline="false" type="primary" @click="openDetail(scope.row.id)">
@@ -265,7 +275,13 @@ const queryParams = reactive({
 const queryFormRef = ref() // 搜索的表单
 const exportLoading = ref(false) // 导出的加载中
 const activeName = ref('1') // 列表 tab
+const selectionList = ref<any[]>([]) // 选中的行数据
 const customerList = ref<CustomerApi.CustomerVO[]>([]) // 客户列表
+
+/** 多选操作 */
+const handleSelectionChange = (rows: any[]) => {
+  selectionList.value = rows
+}
 
 /** 查询列表 */
 const getList = async () => {
@@ -340,6 +356,17 @@ const openDetail = (id: number) => {
 /** 打开客户详情 */
 const openCustomerDetail = (id: number) => {
   push({ name: 'CrmCustomerDetail', params: { id } })
+}
+
+/** 批量删除 */
+const handleBatchDelete = async () => {
+  try {
+    const ids = selectionList.value.map((row: any) => row.id)
+    await message.confirm(t('crm.contact.batchDeleteConfirm', { count: ids.length }))
+    await ContactApi.batchDeleteContact(ids)
+    message.success(t('common.batchActionSuccess'))
+    await getList()
+  } catch {}
 }
 
 /** 初始化 **/

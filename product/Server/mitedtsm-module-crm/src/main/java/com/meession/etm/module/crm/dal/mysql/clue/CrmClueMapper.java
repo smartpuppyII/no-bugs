@@ -2,6 +2,7 @@ package com.meession.etm.module.crm.dal.mysql.clue;
 
 import com.meession.etm.framework.common.pojo.PageResult;
 import com.meession.etm.framework.mybatis.core.mapper.BaseMapperX;
+import com.meession.etm.framework.mybatis.core.query.LambdaQueryWrapperX;
 import com.meession.etm.framework.mybatis.core.query.MPJLambdaWrapperX;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmCluePageReqVO;
 import com.meession.etm.module.crm.dal.dataobject.clue.CrmClueDO;
@@ -21,8 +22,12 @@ public interface CrmClueMapper extends BaseMapperX<CrmClueDO> {
     default PageResult<CrmClueDO> selectPage(CrmCluePageReqVO pageReqVO, Long userId) {
         MPJLambdaWrapperX<CrmClueDO> query = new MPJLambdaWrapperX<>();
         // 拼接数据权限的查询条件
-        CrmPermissionUtils.appendPermissionCondition(query, CrmBizTypeEnum.CRM_CLUE.getType(),
-                CrmClueDO::getId, userId, pageReqVO.getSceneType());
+        if (Boolean.TRUE.equals(pageReqVO.getPool())) {
+            query.isNull(CrmClueDO::getOwnerUserId);
+        } else {
+            CrmPermissionUtils.appendPermissionCondition(query, CrmBizTypeEnum.CRM_CLUE.getType(),
+                    CrmClueDO::getId, userId, pageReqVO.getSceneType());
+        }
         // 拼接自身的查询条件
         query.selectAll(CrmClueDO.class)
                 .likeIfPresent(CrmClueDO::getName, pageReqVO.getName())
@@ -47,6 +52,17 @@ public interface CrmClueMapper extends BaseMapperX<CrmClueDO> {
         query.eq(CrmClueDO::getFollowUpStatus, false)
                 .eq(CrmClueDO::getTransformStatus, false);
         return selectCount(query);
+    }
+
+    default int updateOwnerUserIdById(Long id, Long ownerUserId) {
+        return update(new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<CrmClueDO>()
+                .eq(CrmClueDO::getId, id)
+                .set(CrmClueDO::getOwnerUserId, ownerUserId));
+    }
+
+    default Long selectCountByPool() {
+        return selectCount(new LambdaQueryWrapperX<CrmClueDO>()
+                .isNull(CrmClueDO::getOwnerUserId));
     }
 
 }

@@ -48,6 +48,15 @@
               <Icon class="mr-5px" icon="ep:download" />
               {{ t('common.export') }}
             </el-button>
+            <el-button
+              v-hasPermi="['crm:business:update']"
+              :disabled="selectionList.length === 0"
+              plain
+              type="primary"
+              @click="handleBatchTransfer"
+            >
+              {{ t('crm.business.batchTransfer') }}
+            </el-button>
           </el-form-item>
         </el-col>
       </el-row>
@@ -61,7 +70,8 @@
       <el-tab-pane :label="t('crm.customer.myInvolved')" name="2" />
       <el-tab-pane :label="t('crm.customer.subordinateResponsible')" name="3" />
     </el-tabs>
-    <el-table v-loading="loading" :data="list" :show-overflow-tooltip="true" :stripe="true" :table-layout="'auto'">
+    <el-table v-loading="loading" :data="list" :show-overflow-tooltip="true" :stripe="true" :table-layout="'auto'" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="55" />
       <el-table-column align="center" fixed="left" :label="t('crm.business.name')" prop="name" min-width="160">
         <template #default="scope">
           <el-link :underline="false" type="primary" @click="openDetail(scope.row.id)">
@@ -172,6 +182,8 @@
 
   <!-- 表单弹窗：添加/修改 -->
   <BusinessForm ref="formRef" @success="getList" />
+  <!-- 批量操作弹窗 -->
+  <BatchAssignDialog ref="batchAssignDialogRef" @confirm="handleBatchTransferConfirm" />
 </template>
 
 <script lang="ts" setup>
@@ -179,6 +191,7 @@ import { dateFormatter } from '@/utils/formatTime'
 import download from '@/utils/download'
 import * as BusinessApi from '@/api/crm/business'
 import BusinessForm from './BusinessForm.vue'
+import BatchAssignDialog from '../components/BatchAssignDialog.vue'
 import { erpPriceTableColumnFormatter } from '@/utils'
 import { TabsPaneContext } from 'element-plus'
 
@@ -198,6 +211,12 @@ const queryParams = reactive({
 const queryFormRef = ref() // 搜索的表单
 const exportLoading = ref(false) // 导出的加载中
 const activeName = ref('1') // 列表 tab
+const selectionList = ref<any[]>([]) // 选中的行数据
+
+/** 多选操作 */
+const handleSelectionChange = (rows: any[]) => {
+  selectionList.value = rows
+}
 
 /** 查询列表 */
 const getList = async () => {
@@ -272,6 +291,20 @@ const handleExport = async () => {
   } finally {
     exportLoading.value = false
   }
+}
+
+/** 批量转移 */
+const batchAssignDialogRef = ref()
+const handleBatchTransfer = () => {
+  const ids = selectionList.value.map((row: any) => row.id)
+  batchAssignDialogRef.value.open(ids)
+}
+const handleBatchTransferConfirm = async (data: { userId: number; ids: number[] }) => {
+  try {
+    await BusinessApi.batchTransferBusiness(data.ids, data.userId)
+    message.success(t('common.batchActionSuccess'))
+    await getList()
+  } catch {}
 }
 
 /** 初始化 **/

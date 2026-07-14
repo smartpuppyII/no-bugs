@@ -219,4 +219,17 @@ public class CrmBusinessController {
         return success(true);
     }
 
+    @PutMapping("/batch-transfer")
+    @Operation(summary = "批量转移商机")
+    @PreAuthorize("@ss.hasPermission('crm:business:update')")
+    public CommonResult<Boolean> batchTransferBusiness(@RequestParam("ids") List<Long> ids, @RequestParam("newOwnerUserId") Long newOwnerUserId) {
+        for (Long id : ids) {
+            CrmBusinessTransferReqVO reqVO = new CrmBusinessTransferReqVO();
+            reqVO.setId(id);
+            reqVO.setNewOwnerUserId(newOwnerUserId);
+            businessService.transferBusiness(reqVO, getLoginUserId());
+        }
+        return success(true);
+    }
+
 }

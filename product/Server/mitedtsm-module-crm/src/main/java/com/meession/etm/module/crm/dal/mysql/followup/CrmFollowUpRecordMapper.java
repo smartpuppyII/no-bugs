@@ -37,4 +37,22 @@ public interface CrmFollowUpRecordMapper extends BaseMapperX<CrmFollowUpRecordDO
                 .in(CrmFollowUpRecordDO::getBizId, bizIds));
     }
 
+    default PageResult<CrmFollowUpRecordDO> selectTaskPage(CrmFollowUpRecordPageReqVO reqVO) {
+        LambdaQueryWrapperX<CrmFollowUpRecordDO> wrapper = new LambdaQueryWrapperX<CrmFollowUpRecordDO>();
+        wrapper.isNotNull(CrmFollowUpRecordDO::getNextTime);
+        if (reqVO.getBizType() != null) {
+            wrapper.eq(CrmFollowUpRecordDO::getBizType, reqVO.getBizType());
+        }
+        wrapper.orderByAsc(CrmFollowUpRecordDO::getNextTime);
+        return selectPage(reqVO, wrapper);
+    }
+
+    default Long selectTaskCount() {
+        return selectCount(new LambdaQueryWrapperX<CrmFollowUpRecordDO>()
+                .isNotNull(CrmFollowUpRecordDO::getNextTime)
+                .in(CrmFollowUpRecordDO::getBizType, java.util.Arrays.asList(
+                        com.meession.etm.module.crm.enums.common.CrmBizTypeEnum.CRM_CUSTOMER.getType(),
+                        com.meession.etm.module.crm.enums.common.CrmBizTypeEnum.CRM_CLUE.getType())));
+    }
+
 }

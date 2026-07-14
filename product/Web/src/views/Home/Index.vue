@@ -252,7 +252,7 @@ const getShortcut = async () => {
     {
       name: 'workplace.shortcutCrm',
       icon: 'simple-icons:civicrm',
-      url: '/crm/backlog',
+      url: '/crm/dashboard',
       color: '#4daf1bc9'
     },
     {

@@ -87,6 +87,27 @@
           </el-form-item>
         </el-col>
       </el-row>
+      <el-row :gutter="20">
+        <el-col :span="8">
+          <el-form-item :label="t('tags')" prop="tagIds">
+            <el-select
+              v-model="queryParams.tagIds"
+              class="!w-240px"
+              clearable
+              filterable
+              multiple
+              :placeholder="t('tagsPlaceholder')"
+            >
+              <el-option
+                v-for="tag in allTags"
+                :key="tag.id"
+                :label="tag.name"
+                :value="tag.id"
+              />
+            </el-select>
+          </el-form-item>
+        </el-col>
+      </el-row>
       <el-row>
         <el-col :span="24">
           <el-form-item>
@@ -116,6 +137,51 @@
               <Icon class="mr-5px" icon="ep:download" />
               {{ t('common.export') }}
             </el-button>
+            <el-button
+              v-hasPermi="['crm:customer:update']"
+              :disabled="selectionList.length === 0"
+              plain
+              type="warning"
+              @click="handleBatchLock(true)"
+            >
+              {{ t('batchLock') }}
+            </el-button>
+            <el-button
+              v-hasPermi="['crm:customer:update']"
+              :disabled="selectionList.length === 0"
+              plain
+              type="warning"
+              @click="handleBatchLock(false)"
+            >
+              {{ t('batchUnlock') }}
+            </el-button>
+            <el-button
+              v-hasPermi="['crm:customer:update']"
+              :disabled="selectionList.length === 0"
+              plain
+              type="primary"
+              @click="handleBatchTag"
+            >
+              {{ t('batchTag') }}
+            </el-button>
+            <el-button
+              v-hasPermi="['crm:customer:update']"
+              :disabled="selectionList.length === 0"
+              plain
+              type="primary"
+              @click="handleBatchAssign"
+            >
+              {{ t('batchAssign') }}
+            </el-button>
+            <el-button
+              v-hasPermi="['crm:customer:update']"
+              :disabled="selectionList.length === 0"
+              plain
+              type="danger"
+              @click="handleBatchPutPool"
+            >
+              {{ t('batchPutPool') }}
+            </el-button>
           </el-form-item>
         </el-col>
       </el-row>
@@ -129,12 +195,26 @@
       <el-tab-pane :label="t('myInvolved')" name="2" />
       <el-tab-pane :label="t('subordinateResponsible')" name="3" />
     </el-tabs>
-    <el-table v-loading="loading" :data="list" :show-overflow-tooltip="true" :stripe="true" :table-layout="'auto'">
+    <el-table v-loading="loading" :data="list" :show-overflow-tooltip="true" :stripe="true" :table-layout="'auto'" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="55" />
       <el-table-column align="center" fixed="left" :label="t('name')" prop="name" min-width="160">
         <template #default="scope">
           <el-link :underline="false" type="primary" @click="openDetail(scope.row.id)">
             {{ scope.row.name }}
           </el-link>
+        </template>
+      </el-table-column>
+      <el-table-column align="center" :label="t('tags')" prop="tags" min-width="180">
+        <template #default="scope">
+          <el-tag
+            v-for="tag in scope.row.tags"
+            :key="tag.id"
+            :color="tag.color"
+            class="mr-4px mb-2px"
+            size="small"
+          >
+            {{ tag.name }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column align="center" :label="t('source')" prop="source" min-width="100">
@@ -235,6 +315,9 @@
   <!-- 表单弹窗：添加/修改 -->
   <CustomerForm ref="formRef" @success="getList" />
   <CustomerImportForm ref="importFormRef" @success="getList" />
+  <!-- 批量操作弹窗 -->
+  <BatchTagDialog ref="batchTagDialogRef" @confirm="handleBatchTagConfirm" />
+  <BatchAssignDialog ref="batchAssignDialogRef" @confirm="handleBatchAssignConfirm" />
 </template>
 
 <script lang="ts" setup>
@@ -242,8 +325,11 @@ import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import { dateFormatter } from '@/utils/formatTime'
 import download from '@/utils/download'
 import * as CustomerApi from '@/api/crm/customer'
+import * as TagApi from '@/api/crm/tag'
 import CustomerForm from './CustomerForm.vue'
 import CustomerImportForm from './CustomerImportForm.vue'
+import BatchTagDialog from '../components/BatchTagDialog.vue'
+import BatchAssignDialog from '../components/BatchAssignDialog.vue'
 import { TabsPaneContext } from 'element-plus'
 
 defineOptions({ name: 'CrmCustomer' })
@@ -262,11 +348,19 @@ const queryParams = reactive({
   industryId: undefined,
   level: undefined,
   source: undefined,
-  pool: undefined
+  pool: undefined,
+  tagIds: undefined
 })
+const allTags = ref<TagApi.TagVO[]>([]) // 所有标签列表
 const queryFormRef = ref() // 搜索的表单
 const exportLoading = ref(false) // 导出的加载中
 const activeName = ref('1') // 列表 tab
+const selectionList = ref<any[]>([]) // 选中的行数据
+
+/** 多选操作 */
+const handleSelectionChange = (rows: any[]) => {
+  selectionList.value = rows
+}
 
 /** tab 切换 */
 const handleTabClick = (tab: TabsPaneContext) => {
@@ -344,6 +438,57 @@ const handleExport = async () => {
   }
 }
 
+/** 批量锁定/解锁 */
+const handleBatchLock = async (lockStatus: boolean) => {
+  try {
+    const ids = selectionList.value.map((row: any) => row.id)
+    const actionName = lockStatus ? t('batchLock') : t('batchUnlock')
+    await message.confirm(t('common.batchActionConfirm', { action: actionName, count: ids.length }))
+    await CustomerApi.batchLockCustomer(ids, lockStatus)
+    message.success(t('common.batchActionSuccess'))
+    await getList()
+  } catch {}
+}
+
+/** 批量打标 */
+const batchTagDialogRef = ref()
+const handleBatchTag = () => {
+  const ids = selectionList.value.map((row: any) => row.id)
+  batchTagDialogRef.value.open(ids)
+}
+const handleBatchTagConfirm = async (data: { tagIds: number[]; customerIds: number[] }) => {
+  try {
+    await CustomerApi.batchAddCustomerTag(data.customerIds, data.tagIds)
+    message.success(t('common.batchActionSuccess'))
+    await getList()
+  } catch {}
+}
+
+/** 批量分配 */
+const batchAssignDialogRef = ref()
+const handleBatchAssign = () => {
+  const ids = selectionList.value.map((row: any) => row.id)
+  batchAssignDialogRef.value.open(ids)
+}
+const handleBatchAssignConfirm = async (data: { userId: number; ids: number[] }) => {
+  try {
+    await CustomerApi.distributeCustomer(data.ids, data.userId)
+    message.success(t('common.batchActionSuccess'))
+    await getList()
+  } catch {}
+}
+
+/** 批量放入公海 */
+const handleBatchPutPool = async () => {
+  try {
+    const ids = selectionList.value.map((row: any) => row.id)
+    await message.confirm(t('batchPutPoolConfirm', { count: ids.length }))
+    await CustomerApi.batchPutPool(ids)
+    message.success(t('common.batchActionSuccess'))
+    await getList()
+  } catch {}
+}
+
 /** 监听路由变化更新列表 */
 watch(
   () => currentRoute.value,
@@ -353,7 +498,8 @@ watch(
 )
 
 /** 初始化 **/
-onMounted(() => {
+onMounted(async () => {
+  allTags.value = await TagApi.getAllTags()
   getList()
 })
 </script>

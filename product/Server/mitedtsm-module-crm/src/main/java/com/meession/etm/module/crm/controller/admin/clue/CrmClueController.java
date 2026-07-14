@@ -13,10 +13,12 @@ import com.meession.etm.module.crm.controller.admin.clue.vo.CrmCluePageReqVO;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueRespVO;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueSaveReqVO;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueTransferReqVO;
+import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueDistributeReqVO;
 import com.meession.etm.module.crm.dal.dataobject.clue.CrmClueDO;
 import com.meession.etm.module.crm.dal.dataobject.customer.CrmCustomerDO;
 import com.meession.etm.module.crm.service.clue.CrmClueService;
 import com.meession.etm.module.crm.service.customer.CrmCustomerService;
+import com.meession.etm.module.crm.service.duplicate.CrmCustomerDuplicateService;
 import com.meession.etm.module.system.api.dept.DeptApi;
 import com.meession.etm.module.system.api.dept.dto.DeptRespDTO;
 import com.meession.etm.module.system.api.user.AdminUserApi;
@@ -55,6 +57,8 @@ public class CrmClueController {
     private CrmClueService clueService;
     @Resource
     private CrmCustomerService customerService;
+    @Resource
+    private CrmCustomerDuplicateService duplicateService;
 
     @Resource
     private AdminUserApi adminUserApi;
@@ -168,6 +172,82 @@ public class CrmClueController {
     @PreAuthorize("@ss.hasPermission('crm:clue:query')")
     public CommonResult<Long> getFollowClueCount() {
         return success(clueService.getFollowClueCount(getLoginUserId()));
+    }
+
+    // ==================== 公海相关操作 ====================
+
+    @PutMapping("/put-pool")
+    @Operation(summary = "线索放入公海")
+    @Parameter(name = "id", description = "线索编号", required = true, example = "1024")
+    @PreAuthorize("@ss.hasPermission('crm:clue:update')")
+    public CommonResult<Boolean> putCluePool(@RequestParam("id") Long id) {
+        clueService.putCluePool(id);
+        return success(true);
+    }
+
+    @PutMapping("/receive")
+    @Operation(summary = "领取公海线索")
+    @Parameter(name = "ids", description = "编号数组", required = true, example = "1,2,3")
+    @PreAuthorize("@ss.hasPermission('crm:clue:update')")
+    public CommonResult<Boolean> receiveClue(@RequestParam(value = "ids") List<Long> ids) {
+        clueService.receiveClue(ids, getLoginUserId(), Boolean.TRUE);
+        return success(true);
+    }
+
+    @PutMapping("/distribute")
+    @Operation(summary = "分配公海线索给对应负责人")
+    @PreAuthorize("@ss.hasPermission('crm:clue:update')")
+    public CommonResult<Boolean> distributeClue(@Valid @RequestBody CrmClueDistributeReqVO distributeReqVO) {
+        clueService.receiveClue(distributeReqVO.getIds(), distributeReqVO.getOwnerUserId(), Boolean.FALSE);
+        return success(true);
+    }
+
+    @GetMapping("/pool-page")
+    @Operation(summary = "获得公海线索分页")
+    @PreAuthorize("@ss.hasPermission('crm:clue:query')")
+    public CommonResult<PageResult<CrmClueRespVO>> getCluePoolPage(@Valid CrmCluePageReqVO pageVO) {
+        pageVO.setPool(true);
+        PageResult<CrmClueDO> pageResult = clueService.getCluePage(pageVO, getLoginUserId());
+        return success(new PageResult<>(buildClueDetailList(pageResult.getList()), pageResult.getTotal()));
+    }
+
+    @GetMapping("/pool-count")
+    @Operation(summary = "获得公海线索数量")
+    @PreAuthorize("@ss.hasPermission('crm:clue:query')")
+    public CommonResult<Long> getCluePoolCount() {
+        return success(clueService.getCluePoolCount());
+    }
+
+    // ==================== 批量操作 ====================
+
+    @DeleteMapping("/batch-delete")
+    @Operation(summary = "批量删除线索")
+    @Parameter(name = "ids", description = "编号数组", required = true, example = "1,2,3")
+    @PreAuthorize("@ss.hasPermission('crm:clue:delete')")
+    public CommonResult<Boolean> batchDeleteClue(@RequestParam("ids") List<Long> ids) {
+        for (Long id : ids) {
+            clueService.deleteClue(id);
+        }
+        return success(true);
+    }
+
+    @PutMapping("/batch-transform")
+    @Operation(summary = "批量线索转化为客户")
+    @PreAuthorize("@ss.hasPermission('crm:clue:update')")
+    public CommonResult<Boolean> batchTransformClue(@RequestBody List<Long> ids) {
+        for (Long id : ids) {
+            clueService.transformClue(id, getLoginUserId());
+        }
+        return success(true);
+    }
+
+    // ==================== 查重相关操作 ====================
+
+    @PostMapping("/check-duplicate")
+    @Operation(summary = "检查线索与已有客户是否重复")
+    public CommonResult<List<Map<String, Object>>> checkDuplicate(@RequestBody Map<String, String> body) {
+        return success(duplicateService.checkDuplicate(
+                body.get("name"), body.get("mobile"), body.get("email"), body.get("wechat"), getLoginUserId()));
     }
 
 }

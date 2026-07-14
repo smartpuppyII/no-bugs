@@ -111,3 +111,8 @@ export const deleteContactBusinessList2 = async (data: ContactBusiness2ReqVO) =>
 export const transferContact = async (data: TransferReqVO) => {
   return await request.put({ url: '/crm/contact/transfer', data })
 }
+
+// 批量删除联系人
+export const batchDeleteContact = async (ids: number[]) => {
+  return await request.delete({ url: '/crm/contact/batch-delete', params: { ids: ids.join(',') } })
+}

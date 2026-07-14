@@ -76,3 +76,38 @@ export const transformClue = async (id: number) => {
 export const getFollowClueCount = async () => {
   return await request.get({ url: '/crm/clue/follow-count' })
 }
+
+// 线索放入公海
+export const putCluePool = async (id: number) => {
+  return await request.put({ url: `/crm/clue/put-pool?id=` + id })
+}
+
+// 领取公海线索
+export const receiveClue = async (ids: number[]) => {
+  return await request.put({ url: `/crm/clue/receive`, params: { ids: ids.join(',') } })
+}
+
+// 分配公海线索
+export const distributeClue = async (data: { ids: number[]; ownerUserId: number }) => {
+  return await request.put({ url: `/crm/clue/distribute`, data })
+}
+
+// 获取公海线索分页
+export const getCluePoolPage = async (params: any) => {
+  return await request.get({ url: `/crm/clue/pool-page`, params })
+}
+
+// 获取公海线索数量
+export const getCluePoolCount = async () => {
+  return await request.get({ url: `/crm/clue/pool-count` })
+}
+
+// 批量删除线索
+export const batchDeleteClue = async (ids: number[]) => {
+  return await request.delete({ url: '/crm/clue/batch-delete', params: { ids: ids.join(',') } })
+}
+
+// 批量转为客户
+export const batchTransformClue = async (ids: number[]) => {
+  return await request.put({ url: '/crm/clue/batch-transform', data: ids })
+}

@@ -223,4 +223,17 @@ public class CrmContactController {
         return success(true);
     }
 
+    // ==================== 批量操作 ====================
+
+    @DeleteMapping("/batch-delete")
+    @Operation(summary = "批量删除联系人")
+    @Parameter(name = "ids", description = "编号数组", required = true, example = "1,2,3")
+    @PreAuthorize("@ss.hasPermission('crm:contact:delete')")
+    public CommonResult<Boolean> batchDeleteContact(@RequestParam("ids") List<Long> ids) {
+        for (Long id : ids) {
+            contactService.deleteContact(id);
+        }
+        return success(true);
+    }
+
 }
