@@ -73,4 +73,41 @@
             <artifactId>mitedtsm-spring-boot-starter-test</artifactId>
         </dependency>
     </dependencies>
+
+    <!-- 新增build+jacoco插件，放在dependencies外面 -->
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.12</version>
+                <executions>
+                    <!-- 测试前注入jacoco代理采集覆盖率 -->
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <!-- test执行完自动生成html报告 -->
+                    <execution>
+                        <id>jacoco-report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <!-- 可选：过滤不需要统计的类，按需开启 -->
+                <configuration>
+                    <excludes>
+                        <exclude>**/*Application.class</exclude>
+                        <exclude>**/entity/**/*.class</exclude>
+                        <exclude>**/config/**/*.class</exclude>
+                        <exclude>**/util/**/*.class</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
