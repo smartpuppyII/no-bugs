@@ -268,6 +268,10 @@ const cancelLeave = async (row) => {
 
 /** 审批进度 */
 const handleProcessDetail = (row) => {
+  if (!row.processInstanceId) {
+    message.warning('该请假申请暂无流程实例，请确认已正确发起审批流程')
+    return
+  }
   router.push({
     name: 'BpmProcessInstanceDetail',
     query: {

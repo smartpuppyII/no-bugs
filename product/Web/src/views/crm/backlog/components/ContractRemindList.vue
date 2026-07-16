@@ -209,12 +209,17 @@ const handleQuery = () => {
 }
 
 /** 查看审批 */
+const { push } = useRouter()
+const message = useMessage()
 const handleProcessDetail = (row: ContractApi.ContractVO) => {
+  if (!row.processInstanceId) {
+    message.warning('该合同暂无流程实例，请确认已正确发起审批流程')
+    return
+  }
   push({ name: 'BpmProcessInstanceDetail', query: { id: row.processInstanceId } })
 }
 
 /** 打开合同详情 */
-const { push } = useRouter()
 const openDetail = (id: number) => {
   push({ name: 'CrmContractDetail', params: { id } })
 }

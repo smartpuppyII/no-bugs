@@ -198,6 +198,12 @@ const BusinessFormComponent = ref<any>(null) // 异步组件
 /** 获取审批详情 */
 const activityNodes = ref<ProcessInstanceApi.ApprovalNodeInfo[]>([]) // 审批节点信息
 const getApprovalDetail = async () => {
+  // 兜底校验：流程实例编号不能为空
+  if (!props.id) {
+    message.error(t('process.instance.idRequired') || '流程实例编号不能为空，请确认该业务已正确发起审批流程')
+    processInstanceLoading.value = false
+    return
+  }
   processInstanceLoading.value = true
   try {
     const param = {
