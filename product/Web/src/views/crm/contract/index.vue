@@ -376,10 +376,6 @@ const handleSubmit = async (row: ContractApi.ContractVO) => {
 
 /** 查看审批 */
 const handleProcessDetail = (row: ContractApi.ContractVO) => {
-  if (!row.processInstanceId) {
-    message.warning('该合同暂无流程实例，请确认已正确发起审批流程')
-    return
-  }
   push({ name: 'BpmProcessInstanceDetail', query: { id: row.processInstanceId } })
 }
 

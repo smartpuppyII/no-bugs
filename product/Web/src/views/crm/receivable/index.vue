@@ -300,17 +300,12 @@ const handleSubmit = async (row: ReceivableApi.ReceivableVO) => {
 }
 
 /** 查看审批 */
-const { push } = useRouter()
-const message = useMessage()
 const handleProcessDetail = (row: ReceivableApi.ReceivableVO) => {
-  if (!row.processInstanceId) {
-    message.warning('该回款暂无流程实例，请确认已正确发起审批流程')
-    return
-  }
   push({ name: 'BpmProcessInstanceDetail', query: { id: row.processInstanceId } })
 }
 
 /** 打开回款详情 */
+const { push } = useRouter()
 const openDetail = (id: number) => {
   push({ name: 'CrmReceivableDetail', params: { id } })
 }
