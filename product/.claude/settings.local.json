@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mysql --version)",
+      "Bash(mysql *)",
+      "Bash(curl -s http://localhost:8080/crm/dashboard/todo-summary -H \"Authorization: Bearer $\\(mysql -u root -p1234 --default-character-set=utf8mb4 mitedtsm_database -N -e \"SELECT access_token FROM system_oauth2_access_token WHERE user_id=1 AND expires_time > NOW\\(\\) ORDER BY create_time DESC LIMIT 1\" \\)\")",
+      "Bash(curl -s \"http://localhost:8080/crm/dashboard/todo-summary\" -H \"Authorization: Bearer $\\(mysql -u root -p1234 --default-character-set=utf8mb4 mitedtsm_database -N -e \"SELECT access_token FROM system_oauth2_access_token WHERE user_id=1 AND expires_time > NOW\\(\\) ORDER BY create_time DESC LIMIT 1\" 2>/dev/null\\)\")"
+    ]
+  }
+}
