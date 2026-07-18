@@ -86,6 +86,21 @@
             </el-select>
           </el-form-item>
         </el-col>
+        <el-col :span="8">
+          <el-form-item :label="t('inflowMethod')" prop="poolEntryType">
+            <el-select
+              v-model="queryParams.poolEntryType"
+              class="!w-240px"
+              clearable
+              :placeholder="t('inflowMethod')"
+            >
+              <el-option :label="t('inflowMethodAuto')" :value="1" />
+              <el-option :label="t('inflowMethodReturn')" :value="2" />
+              <el-option :label="t('inflowMethodForce')" :value="3" />
+              <el-option :label="t('inflowMethodLeave')" :value="4" />
+            </el-select>
+          </el-form-item>
+        </el-col>
       </el-row>
       <el-row>
         <el-col :span="24">
@@ -132,6 +147,10 @@
           <el-link :underline="false" type="primary" @click="openDetail(scope.row.id)">
             {{ scope.row.name }}
           </el-link>
+          <!-- 冷却中标签 -->
+          <el-tag v-if="scope.row.coolingStatus" type="warning" size="small" class="ml-8px">
+            {{ t('coolDown') }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column align="center" :label="t('tags')" prop="tags" min-width="180">
@@ -152,6 +171,54 @@
           <dict-tag :type="DICT_TYPE.CRM_CUSTOMER_SOURCE" :value="scope.row.source" />
         </template>
       </el-table-column>
+      <el-table-column align="center" :label="t('recoveryCountdown')" prop="poolRemainDays" min-width="120">
+        <template #default="scope">
+          <span v-if="scope.row.poolRemainDays !== undefined && scope.row.poolRemainDays !== null"
+                :class="scope.row.poolRemainDays <= 1 ? 'text-red-500 font-bold' : scope.row.poolRemainDays <= 3 ? 'text-yellow-500' : ''">
+            {{ t('daysLater', { day: scope.row.poolRemainDays }) }}
+          </span>
+          <span v-else>-</span>
+        </template>
+      </el-table-column>
+      <el-table-column align="center" :label="t('returnReason')" prop="putPoolReason" min-width="120">
+        <template #default="scope">
+          <el-tag v-if="scope.row.putPoolReason === '无法联系'" type="info" size="small">{{ t('returnReasonCannotContact') }}</el-tag>
+          <el-tag v-else-if="scope.row.putPoolReason === '无意向'" type="warning" size="small">{{ t('returnReasonNoIntention') }}</el-tag>
+          <el-tag v-else-if="scope.row.putPoolReason === '已成交'" type="success" size="small">{{ t('returnReasonDealed') }}</el-tag>
+          <el-tag v-else-if="scope.row.putPoolReason === '其他'" size="small">{{ t('returnReasonOther') }}</el-tag>
+          <span v-else-if="scope.row.putPoolReason">{{ scope.row.putPoolReason }}</span>
+          <span v-else>-</span>
+        </template>
+      </el-table-column>
+      <el-table-column align="center" :label="t('originalOwner')" prop="previousOwnerName" min-width="100">
+        <template #default="scope">
+          {{ scope.row.previousOwnerName || '-' }}
+        </template>
+      </el-table-column>
+      <el-table-column align="center" :label="t('reservationCount')" prop="reservationCount" min-width="90">
+        <template #default="scope">
+          <el-link v-if="scope.row.reservationCount" :underline="false" type="primary">
+            {{ scope.row.reservationCount }}
+          </el-link>
+          <span v-else>0</span>
+        </template>
+      </el-table-column>
+      <el-table-column align="center" :label="t('inflowMethod')" prop="poolEntryType" min-width="120">
+        <template #default="scope">
+          <el-tag v-if="scope.row.poolEntryType === 1" type="danger" size="small">{{ t('inflowMethodAuto') }}</el-tag>
+          <el-tag v-else-if="scope.row.poolEntryType === 2" type="warning" size="small">{{ t('inflowMethodReturn') }}</el-tag>
+          <el-tag v-else-if="scope.row.poolEntryType === 3" type="danger" size="small">{{ t('inflowMethodForce') }}</el-tag>
+          <el-tag v-else-if="scope.row.poolEntryType === 4" type="info" size="small">{{ t('inflowMethodLeave') }}</el-tag>
+          <span v-else>-</span>
+        </template>
+      </el-table-column>
+      <el-table-column
+        :formatter="dateFormatter"
+        align="center"
+        :label="t('inflowTime')"
+        prop="poolEntryTime"
+        min-width="180"
+      />
       <el-table-column :label="t('mobile')" align="center" prop="mobile" min-width="120" />
       <el-table-column :label="t('telephone')" align="center" prop="telephone" min-width="130" />
       <el-table-column :label="t('email')" align="center" prop="email" min-width="180" />
@@ -201,6 +268,38 @@
         min-width="180"
       />
       <el-table-column align="center" :label="t('common.creator')" prop="creatorName" min-width="100" />
+      <!-- 操作列：领取 -->
+      <el-table-column align="center" :label="t('common.action')" fixed="right" min-width="120">
+        <template #default="scope">
+          <el-tooltip
+            v-if="isClaimLimitReached"
+            :content="t('claimLimitReached', { current: dailyClaimCount.dailyCustomerClaimCount, max: dailyClaimCount.dailyCustomerLimit })"
+            placement="top"
+          >
+            <el-button type="primary" disabled size="small">
+              {{ t('receive') }}
+            </el-button>
+          </el-tooltip>
+          <el-tooltip
+            v-else-if="scope.row.coolingStatus"
+            :content="t('coolDown')"
+            placement="top"
+          >
+            <el-button type="primary" disabled size="small">
+              {{ t('receive') }}
+            </el-button>
+          </el-tooltip>
+          <el-button
+            v-else
+            v-hasPermi="['crm:customer:receive']"
+            type="primary"
+            size="small"
+            @click="handleReceiveCustomer(scope.row)"
+          >
+            {{ t('receive') }}
+          </el-button>
+        </template>
+      </el-table-column>
     </el-table>
     <!-- 分页 -->
     <Pagination
@@ -217,6 +316,8 @@ import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import { dateFormatter } from '@/utils/formatTime'
 import download from '@/utils/download'
 import * as CustomerApi from '@/api/crm/customer'
+import * as SeaPoolApi from '@/api/crm/seapool'
+import type { DailyClaimCountVO } from '@/api/crm/seapool'
 
 defineOptions({ name: 'CrmCustomerPool' })
 
@@ -234,11 +335,35 @@ const queryParams = ref({
   level: undefined,
   source: undefined,
   sceneType: undefined,
-  pool: true
+  pool: true,
+  poolEntryType: undefined
 })
 const queryFormRef = ref() // 搜索的表单
 const exportLoading = ref(false) // 导出的加载中
 const selectionList = ref<any[]>([]) // 选中的行数据
+
+// ===== 公海领取限制 =====
+const dailyClaimCount = ref<DailyClaimCountVO>({
+  dailyClueClaimCount: 0,
+  dailyClueLimit: 0,
+  dailyCustomerClaimCount: 0,
+  dailyCustomerLimit: 0
+})
+
+/** 是否达到领取上限 */
+const isClaimLimitReached = computed(() => {
+  const { dailyCustomerClaimCount, dailyCustomerLimit } = dailyClaimCount.value
+  return dailyCustomerLimit > 0 && dailyCustomerClaimCount >= dailyCustomerLimit
+})
+
+/** 获取当日领取统计 */
+const loadDailyClaimCount = async () => {
+  try {
+    dailyClaimCount.value = await SeaPoolApi.getDailyClaimCount()
+  } catch {
+    // 降级处理：不阻塞列表加载
+  }
+}
 
 /** 多选操作 */
 const handleSelectionChange = (rows: any[]) => {
@@ -275,7 +400,8 @@ const resetQuery = () => {
     level: undefined,
     source: undefined,
     sceneType: undefined,
-    pool: true
+    pool: true,
+    poolEntryType: undefined
   }
   handleQuery()
 }
@@ -309,6 +435,18 @@ watch(
   }
 )
 
+/** 单个领取客户 */
+const handleReceiveCustomer = async (row: any) => {
+  try {
+    await message.confirm(t('receiveConfirm', { name: row.name }))
+    await CustomerApi.receiveCustomer([row.id])
+    message.success(t('receiveSuccess', { name: row.name }))
+    // 刷新领取统计和列表
+    await loadDailyClaimCount()
+    await getList()
+  } catch {}
+}
+
 /** 批量领取 */
 const handleBatchReceive = async () => {
   try {
@@ -316,6 +454,7 @@ const handleBatchReceive = async () => {
     await message.confirm(t('batchReceiveConfirm', { count: ids.length }))
     await CustomerApi.receiveCustomer(ids)
     message.success(t('common.batchActionSuccess'))
+    await loadDailyClaimCount()
     await getList()
   } catch {}
 }
@@ -323,5 +462,6 @@ const handleBatchReceive = async () => {
 /** 初始化 **/
 onMounted(() => {
   getList()
+  loadDailyClaimCount()
 })
 </script>

@@ -28,7 +28,27 @@
     </el-form>
   </ContentWrap>
   <ContentWrap>
-    <el-table v-loading="loading" :data="list" :show-overflow-tooltip="true" :stripe="true" :table-layout="'auto'">
+    <!-- 批量操作按钮 -->
+    <div class="mb-10px">
+      <el-button
+        :disabled="selectionList.length === 0"
+        plain
+        type="primary"
+        @click="handleBatchExtension"
+      >
+        {{ t('backlog.batchExtension') }}
+      </el-button>
+    </div>
+    <el-table
+      v-loading="loading"
+      :data="list"
+      :show-overflow-tooltip="true"
+      :stripe="true"
+      :table-layout="'auto'"
+      @selection-change="handleSelectionChange"
+    >
+      <!-- 多选列 -->
+      <el-table-column type="selection" width="55" />
       <el-table-column align="center" :label="t('customer.name')" fixed="left" prop="name" min-width="160">
         <template #default="scope">
           <el-link :underline="false" type="primary" @click="openDetail(scope.row.id)">
@@ -61,6 +81,20 @@
         prop="contactNextTime"
         min-width="180"
       />
+      <!-- 剩余天数 -->
+      <el-table-column align="center" :label="t('backlog.remainingDays')" prop="remainingDays" min-width="120">
+        <template #default="scope">
+          <span
+            :class="{
+              'text-red-500 font-bold': scope.row.remainingDays <= 1,
+              'text-yellow-500 font-bold': scope.row.remainingDays > 1 && scope.row.remainingDays <= 3,
+              'text-green-500': scope.row.remainingDays > 3
+            }"
+          >
+            {{ scope.row.remainingDays }}{{ t('customer.dayUnit') }}
+          </span>
+        </template>
+      </el-table-column>
       <el-table-column align="center" :label="t('customer.remark')" prop="remark" min-width="200" />
       <el-table-column align="center" :label="t('customer.lockStatus')" prop="lockStatus">
         <template #default="scope">
@@ -101,6 +135,22 @@
         min-width="180"
       />
       <el-table-column align="center" :label="t('common.creator')" prop="creatorName" min-width="100" />
+      <!-- 操作列 -->
+      <el-table-column align="center" :label="t('common.action')" min-width="180" fixed="right">
+        <template #default="scope">
+          <el-button
+            link
+            type="primary"
+            :disabled="scope.row.extensionCount >= 3"
+            @click="handleExtension(scope.row)"
+          >
+            {{ t('backlog.extension') }}
+          </el-button>
+          <el-button link type="primary" @click="handleFollowUp(scope.row)">
+            {{ t('backlog.followUp') }}
+          </el-button>
+        </template>
+      </el-table-column>
     </el-table>
     <!-- 分页 -->
     <Pagination
@@ -110,6 +160,26 @@
       @pagination="getList"
     />
   </ContentWrap>
+
+  <!-- 延期弹窗 -->
+  <el-dialog
+    v-model="extensionDialogVisible"
+    :title="t('backlog.extensionDays')"
+    width="400px"
+    append-to-body
+  >
+    <el-radio-group v-model="extensionDays" class="flex flex-col gap-3">
+      <el-radio :value="7">{{ t('backlog.extensionDays7') }}</el-radio>
+      <el-radio :value="15">{{ t('backlog.extensionDays15') }}</el-radio>
+      <el-radio :value="30">{{ t('backlog.extensionDays30') }}</el-radio>
+    </el-radio-group>
+    <template #footer>
+      <el-button @click="extensionDialogVisible = false">{{ t('common.cancel') }}</el-button>
+      <el-button type="primary" :loading="extensionLoading" @click="confirmExtension">
+        {{ t('common.confirm') }}
+      </el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script lang="ts" setup>
@@ -120,6 +190,7 @@ import { SCENE_TYPES } from './common'
 
 defineOptions({ name: 'CrmCustomerPutPoolRemindList' })
 
+const message = useMessage() // 消息弹窗
 const { t } = useI18n('crm') // 国际化
 const loading = ref(true) // 列表的加载中
 const total = ref(0) // 列表的总页数
@@ -131,6 +202,22 @@ const queryParams = ref({
   pool: true // 固定 公海参数为 true
 })
 const queryFormRef = ref() // 搜索的表单
+
+// 多选
+const selectionList = ref<any[]>([])
+
+/** 多选操作 */
+const handleSelectionChange = (rows: any[]) => {
+  selectionList.value = rows
+}
+
+// 延期弹窗
+const extensionDialogVisible = ref(false)
+const extensionDays = ref(7)
+const extensionLoading = ref(false)
+const currentExtensionRow = ref<any>(null) // 当前单个延期的行
+const isBatchExtension = ref(false) // 是否批量延期
+
 /** 查询列表 */
 const getList = async () => {
   loading.value = true
@@ -155,6 +242,60 @@ const openDetail = (id: number) => {
   push({ name: 'CrmCustomerDetail', params: { id } })
 }
 
+/** 一键延期：打开延期弹窗 */
+const handleExtension = (row: any) => {
+  if (row.extensionCount >= 3) {
+    message.warning(t('backlog.extensionMaxReached'))
+    return
+  }
+  currentExtensionRow.value = row
+  isBatchExtension.value = false
+  extensionDays.value = 7
+  extensionDialogVisible.value = true
+}
+
+/** 立即跟进：跳转至客户详情页跟进记录Tab */
+const handleFollowUp = (row: any) => {
+  push({ name: 'CrmCustomerDetail', params: { id: row.id }, query: { tab: 'followUp' } })
+}
+
+/** 批量延期 */
+const handleBatchExtension = () => {
+  if (selectionList.value.length === 0) {
+    message.warning('请先选择需要延期的客户')
+    return
+  }
+  currentExtensionRow.value = null
+  isBatchExtension.value = true
+  extensionDays.value = 7
+  extensionDialogVisible.value = true
+}
+
+/** 确认延期 */
+const confirmExtension = async () => {
+  try {
+    extensionLoading.value = true
+    if (isBatchExtension.value) {
+      const ids = selectionList.value.map((row: any) => row.id)
+      await message.confirm(t('backlog.extensionConfirm', { day: extensionDays.value }))
+      await CustomerApi.batchExtendPutPoolRemind(ids, extensionDays.value)
+      message.success(t('backlog.extensionSuccess'))
+      selectionList.value = []
+    } else {
+      const row = currentExtensionRow.value
+      await message.confirm(t('backlog.extensionConfirm', { day: extensionDays.value }))
+      await CustomerApi.extendPutPoolRemind(row.id, extensionDays.value)
+      message.success(t('backlog.extensionSuccess'))
+    }
+    extensionDialogVisible.value = false
+    await getList()
+  } catch {
+    // 用户取消或请求失败
+  } finally {
+    extensionLoading.value = false
+  }
+}
+
 /** 激活时 */
 onActivated(async () => {
   await getList()
@@ -166,4 +307,14 @@ onMounted(() => {
 })
 </script>
 
-<style lang="scss"></style>
+<style lang="scss" scoped>
+.text-red-500 {
+  color: #ef4444;
+}
+.text-yellow-500 {
+  color: #eab308;
+}
+.text-green-500 {
+  color: #22c55e;
+}
+</style>

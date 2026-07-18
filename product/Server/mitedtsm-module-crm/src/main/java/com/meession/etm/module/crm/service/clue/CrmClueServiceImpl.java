@@ -9,9 +9,14 @@ import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueSaveReqVO;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueTransferReqVO;
 import com.meession.etm.module.crm.controller.admin.customer.vo.customer.CrmCustomerSaveReqVO;
 import com.meession.etm.module.crm.dal.dataobject.clue.CrmClueDO;
+import com.meession.etm.module.crm.dal.dataobject.seapool.CrmCluePoolRecordDO;
+import com.meession.etm.module.crm.dal.dataobject.seapool.CrmSeaPoolDailyLimitDO;
+import com.meession.etm.module.crm.dal.dataobject.seapool.CrmSeaPoolLimitConfigDO;
 import com.meession.etm.module.crm.dal.dataobject.followup.CrmFollowUpRecordDO;
 import com.meession.etm.module.crm.dal.dataobject.transfer.CrmTransferLogDO;
 import com.meession.etm.module.crm.dal.mysql.clue.CrmClueMapper;
+import com.meession.etm.module.crm.dal.mysql.seapool.CrmCluePoolRecordMapper;
+import com.meession.etm.module.crm.dal.mysql.seapool.CrmSeaPoolDailyLimitMapper;
 import com.meession.etm.module.crm.enums.common.CrmBizTypeEnum;
 import com.meession.etm.module.crm.enums.permission.CrmPermissionLevelEnum;
 import com.meession.etm.module.crm.framework.permission.core.annotations.CrmPermission;
@@ -31,11 +36,13 @@ import com.mzt.logapi.service.impl.DiffParseFunction;
 import com.mzt.logapi.starter.annotation.LogRecord;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +51,10 @@ import java.util.Objects;
 import static com.meession.etm.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.meession.etm.framework.common.util.collection.CollectionUtils.convertList;
 import static com.meession.etm.framework.common.util.collection.CollectionUtils.singleton;
+import static com.meession.etm.module.crm.enums.ErrorCodeConstants.CLUE_DAILY_RECEIVE_LIMIT_EXCEEDED;
+import static com.meession.etm.module.crm.enums.ErrorCodeConstants.CLUE_IN_COOLING_PERIOD;
 import static com.meession.etm.module.crm.enums.ErrorCodeConstants.CLUE_NOT_EXISTS;
+import static com.meession.etm.module.crm.enums.ErrorCodeConstants.CLUE_SEA_POOL_CONFLICT;
 import static com.meession.etm.module.crm.enums.ErrorCodeConstants.CLUE_TRANSFORM_FAIL_ALREADY;
 import static com.meession.etm.module.crm.enums.LogRecordConstants.*;
 import static com.meession.etm.module.system.enums.ErrorCodeConstants.USER_NOT_EXISTS;
@@ -74,6 +84,15 @@ public class CrmClueServiceImpl implements CrmClueService {
 
     @Resource
     private CrmTransferLogService transferLogService;
+
+    // ==================== 公海增强依赖 ====================
+    @Resource
+    private CrmCluePoolRecordMapper cluePoolRecordMapper;
+    @Resource
+    private CrmSeaPoolDailyLimitMapper seaPoolDailyLimitMapper;
+    @Resource
+    @Lazy
+    private com.meession.etm.module.crm.service.seapool.CrmSeaPoolLimitConfigService seaPoolLimitConfigService;
 
     @Resource
     private AdminUserApi adminUserApi;
@@ -291,8 +310,26 @@ public class CrmClueServiceImpl implements CrmClueService {
             success = CRM_CLUE_POOL_SUCCESS)
     @CrmPermission(bizType = CrmBizTypeEnum.CRM_CLUE, bizId = "#id", level = CrmPermissionLevelEnum.OWNER)
     public void putCluePool(Long id) {
+        putCluePoolInternal(id, "系统自动回收");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    @LogRecord(type = CRM_CLUE_TYPE, subType = CRM_CLUE_POOL_SUB_TYPE, bizNo = "{{#id}}",
+            success = CRM_CLUE_POOL_SUCCESS)
+    @CrmPermission(bizType = CrmBizTypeEnum.CRM_CLUE, bizId = "#id", level = CrmPermissionLevelEnum.OWNER)
+    public void putCluePool(Long id, String reason) {
+        putCluePoolInternal(id, reason != null ? reason : "主动归还");
+    }
+
+    /**
+     * 线索放入公海内部实现
+     */
+    private void putCluePoolInternal(Long id, String reason) {
         // 1. 校验存在
         CrmClueDO clue = validateClueExists(id);
+
+        Long originalOwnerUserId = clue.getOwnerUserId();
 
         // 2. 设置负责人为 NULL
         int updateOwnerUserIncr = clueMapper.updateOwnerUserIdById(clue.getId(), null);
@@ -300,11 +337,25 @@ public class CrmClueServiceImpl implements CrmClueService {
             throw exception(CLUE_NOT_EXISTS);
         }
 
-        // 3. 删除负责人数据权限
+        // 3. 更新公海状态
+        clueMapper.updateById(new CrmClueDO().setId(clue.getId())
+                .setPoolStatus(1).setPoolEnterTime(LocalDateTime.now()));
+
+        // 4. 删除负责人数据权限
         crmPermissionService.deletePermission(CrmBizTypeEnum.CRM_CLUE.getType(), clue.getId(),
                 CrmPermissionLevelEnum.OWNER.getLevel());
 
-        // 4. 记录操作日志上下文
+        // 5. 记录冷却记录（流转日志）
+        cluePoolRecordMapper.insert(CrmCluePoolRecordDO.builder()
+                .clueId(clue.getId())
+                .fromUserId(originalOwnerUserId)
+                .toUserId(null)
+                .operateType(reason != null && reason.contains("自动回收") ? 1 : 2) // 1-自动回收 2-手动退回
+                .reason(reason)
+                .operateTime(LocalDateTime.now())
+                .build());
+
+        // 6. 记录操作日志上下文
         LogRecordContext.putVariable("clueName", clue.getName());
     }
 
@@ -319,28 +370,111 @@ public class CrmClueServiceImpl implements CrmClueService {
         // 1.2 校验负责人是否存在
         adminUserApi.validateUserList(singleton(ownerUserId));
 
-        // 2. 领取公海线索
-        List<CrmClueDO> updateClues = new ArrayList<>();
+        // 1.3 校验每日领取上限
+        validateClueDailyReceiveLimit(ownerUserId, clues.size());
+
+        // 1.4 校验冷却时间
+        for (CrmClueDO clue : clues) {
+            validateClueCoolingPeriod(clue.getId(), ownerUserId);
+        }
+
+        // 2. 领取公海线索（乐观锁并发控制）
+        CrmSeaPoolLimitConfigDO limitConfig = seaPoolLimitConfigService.getLimitConfig();
+        int protectHours = (limitConfig != null && limitConfig.getProtectHours() != null)
+                ? limitConfig.getProtectHours() : 24;
+        LocalDateTime protectDeadline = LocalDateTime.now().plusHours(protectHours);
+
         List<CrmPermissionCreateReqBO> createPermissions = new ArrayList<>();
-        clues.forEach(clue -> {
-            // 2.1 设置负责人
-            updateClues.add(new CrmClueDO().setId(clue.getId()).setOwnerUserId(ownerUserId));
-            // 2.2 创建负责人数据权限
+        for (CrmClueDO clue : clues) {
+            // 2.1 乐观锁更新：仅在 ownerUserId 为 null 时才能领取
+            int updated = clueMapper.updateOwnerUserIdByIdWithLock(clue.getId(), ownerUserId, null);
+            if (updated == 0) {
+                throw exception(CLUE_SEA_POOL_CONFLICT, clue.getName());
+            }
+            // 2.2 更新保护期和领取时间
+            clueMapper.updateById(new CrmClueDO().setId(clue.getId())
+                    .setOwnerTime(LocalDateTime.now())
+                    .setPoolStatus(0)
+                    .setProtectDeadline(protectDeadline)
+                    .setProtectUserId(ownerUserId));
+            // 2.3 创建负责人数据权限
             createPermissions.add(new CrmPermissionCreateReqBO().setBizType(CrmBizTypeEnum.CRM_CLUE.getType())
                     .setBizId(clue.getId()).setUserId(ownerUserId).setLevel(CrmPermissionLevelEnum.OWNER.getLevel()));
-        });
-        // 2.3 更新线索负责人
-        updateClues.forEach(clue -> clueMapper.updateById(clue));
+        }
         // 2.4 创建负责人数据权限
         crmPermissionService.createPermissionBatch(createPermissions);
 
-        // 3. 记录操作日志
+        // 2.5 更新每日领取计数
+        updateClueDailyReceiveCount(ownerUserId, 2, clues.size());
+
+        // 3. 记录操作日志和流转日志
         AdminUserRespDTO user = null;
         if (!isReceive) {
             user = adminUserApi.getUser(ownerUserId);
         }
         for (CrmClueDO clue : clues) {
             getSelf().receiveClueLog(clue, user == null ? null : user.getNickname());
+            // 记录流转日志
+            cluePoolRecordMapper.insert(CrmCluePoolRecordDO.builder()
+                    .clueId(clue.getId())
+                    .fromUserId(null) // 公海无归属
+                    .toUserId(ownerUserId)
+                    .operateType(3) // 主动领取
+                    .reason("从公海领取")
+                    .operateTime(LocalDateTime.now())
+                    .build());
+        }
+    }
+
+    // ==================== 公海校验增强方法 ====================
+
+    /**
+     * 校验线索每日领取上限
+     */
+    private void validateClueDailyReceiveLimit(Long userId, int newCount) {
+        CrmSeaPoolLimitConfigDO limitConfig = seaPoolLimitConfigService.getLimitConfig();
+        if (limitConfig == null || limitConfig.getDailyClueLimit() == null) {
+            return;
+        }
+        int dailyLimit = limitConfig.getDailyClueLimit();
+        LocalDate today = LocalDate.now();
+
+        CrmSeaPoolDailyLimitDO todayLimit = seaPoolDailyLimitMapper.selectByUserAndDate(userId, 2, today);
+        int todayCount = todayLimit != null ? todayLimit.getCount() : 0;
+        if (todayCount + newCount > dailyLimit) {
+            throw exception(CLUE_DAILY_RECEIVE_LIMIT_EXCEEDED, todayCount, dailyLimit);
+        }
+    }
+
+    /**
+     * 校验线索冷却时间
+     */
+    private void validateClueCoolingPeriod(Long clueId, Long userId) {
+        CrmSeaPoolLimitConfigDO limitConfig = seaPoolLimitConfigService.getLimitConfig();
+        if (limitConfig == null || limitConfig.getCoolingDays() == null || limitConfig.getCoolingDays() <= 0) {
+            return;
+        }
+        int coolingDays = limitConfig.getCoolingDays();
+        CrmCluePoolRecordDO lastReturn = cluePoolRecordMapper.selectLastReturnByClueIdAndUserId(clueId, userId);
+        if (lastReturn != null) {
+            LocalDateTime coolingEnd = lastReturn.getOperateTime().plusDays(coolingDays);
+            if (LocalDateTime.now().isBefore(coolingEnd)) {
+                throw exception(CLUE_IN_COOLING_PERIOD, clueId);
+            }
+        }
+    }
+
+    /**
+     * 更新线索每日领取计数
+     */
+    private void updateClueDailyReceiveCount(Long userId, int resourceType, int delta) {
+        LocalDate today = LocalDate.now();
+        CrmSeaPoolDailyLimitDO todayLimit = seaPoolDailyLimitMapper.selectByUserAndDate(userId, resourceType, today);
+        if (todayLimit == null) {
+            seaPoolDailyLimitMapper.insert(CrmSeaPoolDailyLimitDO.builder()
+                    .userId(userId).resourceType(resourceType).count(delta).limitDate(today).build());
+        } else {
+            seaPoolDailyLimitMapper.incrementCount(todayLimit.getId(), delta);
         }
     }
 

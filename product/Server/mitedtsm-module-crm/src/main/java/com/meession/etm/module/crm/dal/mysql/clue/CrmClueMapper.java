@@ -1,5 +1,7 @@
 package com.meession.etm.module.crm.dal.mysql.clue;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.meession.etm.framework.common.pojo.PageResult;
 import com.meession.etm.framework.mybatis.core.mapper.BaseMapperX;
 import com.meession.etm.framework.mybatis.core.query.LambdaQueryWrapperX;
@@ -10,6 +12,9 @@ import com.meession.etm.module.crm.enums.common.CrmBizTypeEnum;
 import com.meession.etm.module.crm.enums.common.CrmSceneTypeEnum;
 import com.meession.etm.module.crm.util.CrmPermissionUtils;
 import org.apache.ibatis.annotations.Mapper;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 线索 Mapper
@@ -63,6 +68,49 @@ public interface CrmClueMapper extends BaseMapperX<CrmClueDO> {
     default Long selectCountByPool() {
         return selectCount(new LambdaQueryWrapperX<CrmClueDO>()
                 .isNull(CrmClueDO::getOwnerUserId));
+    }
+
+    // ==================== 公海增强查询方法 ====================
+
+    /**
+     * 获得需要自动掉入公海的线索列表
+     *
+     * @param expireDays 回收时效天数
+     * @return 线索列表
+     */
+    default List<CrmClueDO> selectListByAutoPool(int expireDays) {
+        LambdaQueryWrapper<CrmClueDO> query = new LambdaQueryWrapper<>();
+        // 有负责人
+        query.gt(CrmClueDO::getOwnerUserId, 0);
+        // 未转化
+        query.eq(CrmClueDO::getTransformStatus, false);
+        // 跟进超时：contactLastTime 早于 (now - expireDays) 或为空
+        LocalDateTime expireTime = LocalDateTime.now().minusDays(expireDays);
+        query.and(q -> q.lt(CrmClueDO::getContactLastTime, expireTime)
+                .or().isNull(CrmClueDO::getContactLastTime));
+        return selectList(query);
+    }
+
+    /**
+     * 乐观锁更新负责人：仅当 ownerUserId 等于 expectedOwnerUserId 时才更新
+     *
+     * @param id                 线索编号
+     * @param newOwnerUserId     新负责人（null 表示放入公海）
+     * @param expectedOwnerUserId 期望的当前负责人
+     * @return 更新行数
+     */
+    default int updateOwnerUserIdByIdWithLock(Long id, Long newOwnerUserId, Long expectedOwnerUserId) {
+        LambdaUpdateWrapper<CrmClueDO> wrapper = new LambdaUpdateWrapper<CrmClueDO>()
+                .eq(CrmClueDO::getId, id);
+        if (expectedOwnerUserId == null) {
+            wrapper.isNull(CrmClueDO::getOwnerUserId);
+        } else {
+            wrapper.eq(CrmClueDO::getOwnerUserId, expectedOwnerUserId);
+        }
+        return update(new CrmClueDO().setId(id).setOwnerUserId(newOwnerUserId)
+                .setPoolStatus(newOwnerUserId == null ? 1 : 0)
+                .setPoolEnterTime(newOwnerUserId == null ? LocalDateTime.now() : null)
+                .setPoolReason(newOwnerUserId == null ? "自动回收" : null), wrapper);
     }
 
 }

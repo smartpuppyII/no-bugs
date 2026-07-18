@@ -182,6 +182,15 @@
             >
               {{ t('batchPutPool') }}
             </el-button>
+            <el-button
+              v-if="isSupervisor"
+              :disabled="selectionList.length === 0"
+              plain
+              type="danger"
+              @click="handleBatchForceRecovery"
+            >
+              {{ t('batchForceRecovery') }}
+            </el-button>
           </el-form-item>
         </el-col>
       </el-row>
@@ -331,6 +340,7 @@ import CustomerImportForm from './CustomerImportForm.vue'
 import BatchTagDialog from '../components/BatchTagDialog.vue'
 import BatchAssignDialog from '../components/BatchAssignDialog.vue'
 import { TabsPaneContext } from 'element-plus'
+import { useUserStoreWithOut } from '@/store/modules/user'
 
 defineOptions({ name: 'CrmCustomer' })
 
@@ -339,6 +349,14 @@ const { t } = useI18n('crm.customer') // 国际化
 const loading = ref(true) // 列表的加载中
 const total = ref(0) // 列表的总页数
 const list = ref([]) // 列表的数据
+
+// 判断是否为销售主管/超级管理员
+const userStore = useUserStoreWithOut()
+const isSupervisor = computed(() => {
+  const roles = userStore.getRoles
+  // 超级管理员或销售主管角色可进行批量强制回收
+  return roles.some((role) => ['admin', 'super_admin', 'supervisor', 'sales_supervisor'].includes(role))
+})
 const queryParams = reactive({
   pageNo: 1,
   pageSize: 10,
@@ -483,6 +501,17 @@ const handleBatchPutPool = async () => {
   try {
     const ids = selectionList.value.map((row: any) => row.id)
     await message.confirm(t('batchPutPoolConfirm', { count: ids.length }))
+    await CustomerApi.batchPutPool(ids)
+    message.success(t('common.batchActionSuccess'))
+    await getList()
+  } catch {}
+}
+
+/** 批量强制回收至公海（主管/管理员专用） */
+const handleBatchForceRecovery = async () => {
+  try {
+    const ids = selectionList.value.map((row: any) => row.id)
+    await message.confirm(t('batchForceRecoveryConfirm', { count: ids.length }))
     await CustomerApi.batchPutPool(ids)
     message.success(t('common.batchActionSuccess'))
     await getList()

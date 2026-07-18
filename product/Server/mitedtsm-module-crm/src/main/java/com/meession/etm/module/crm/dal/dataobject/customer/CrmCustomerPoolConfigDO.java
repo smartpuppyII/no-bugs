@@ -48,5 +48,25 @@ public class CrmCustomerPoolConfigDO extends BaseDO {
      */
     @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Integer notifyDays;
+    /**
+     * 客户等级回收时效JSON，格式: {"A":30,"B":15,"C":7}
+     */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String levelExpireDays;
+    /**
+     * 是否暂停有合同客户的回收（0-否 1-是）
+     */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private Boolean pauseContractEnabled;
+    /**
+     * 是否暂停有应收款客户的回收（0-否 1-是）
+     */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private Boolean pauseReceivableEnabled;
+    /**
+     * 最大延期次数
+     */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private Integer extendMaxCount;
 
 }

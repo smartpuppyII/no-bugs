@@ -53,4 +53,40 @@ public class CrmCustomerPoolConfigServiceImpl implements CrmCustomerPoolConfigSe
         LogRecordContext.putVariable("poolConfigId", poolConfig.getId());
     }
 
+    @Override
+    @LogRecord(type = CRM_CUSTOMER_POOL_CONFIG_TYPE, subType = "更新客户等级回收时效", bizNo = "{{#poolConfigId}}",
+            success = "更新了客户等级回收时效为【{{#levelExpireDays}}】")
+    public void updateLevelExpireConfig(String levelExpireDays) {
+        CrmCustomerPoolConfigDO dbConfig = getCustomerPoolConfig();
+        if (dbConfig == null) {
+            dbConfig = new CrmCustomerPoolConfigDO();
+            dbConfig.setLevelExpireDays(levelExpireDays);
+            customerPoolConfigMapper.insert(dbConfig);
+            LogRecordContext.putVariable("poolConfigId", dbConfig.getId());
+            return;
+        }
+        dbConfig.setLevelExpireDays(levelExpireDays);
+        customerPoolConfigMapper.updateById(dbConfig);
+        LogRecordContext.putVariable("poolConfigId", dbConfig.getId());
+    }
+
+    @Override
+    @LogRecord(type = CRM_CUSTOMER_POOL_CONFIG_TYPE, subType = "更新合同/回款暂停配置", bizNo = "{{#poolConfigId}}",
+            success = "更新了合同/回款暂停配置：合同暂停={{#pauseContractEnabled}}，回款暂停={{#pauseReceivableEnabled}}")
+    public void updatePauseConfig(Boolean pauseContractEnabled, Boolean pauseReceivableEnabled) {
+        CrmCustomerPoolConfigDO dbConfig = getCustomerPoolConfig();
+        if (dbConfig == null) {
+            dbConfig = new CrmCustomerPoolConfigDO();
+            dbConfig.setPauseContractEnabled(pauseContractEnabled);
+            dbConfig.setPauseReceivableEnabled(pauseReceivableEnabled);
+            customerPoolConfigMapper.insert(dbConfig);
+            LogRecordContext.putVariable("poolConfigId", dbConfig.getId());
+            return;
+        }
+        dbConfig.setPauseContractEnabled(pauseContractEnabled);
+        dbConfig.setPauseReceivableEnabled(pauseReceivableEnabled);
+        customerPoolConfigMapper.updateById(dbConfig);
+        LogRecordContext.putVariable("poolConfigId", dbConfig.getId());
+    }
+
 }

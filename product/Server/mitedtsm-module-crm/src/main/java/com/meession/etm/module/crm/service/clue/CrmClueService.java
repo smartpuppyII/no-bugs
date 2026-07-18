@@ -89,6 +89,8 @@ public interface CrmClueService {
      */
     Long getFollowClueCount(Long userId);
 
+// ==================== 公海相关操作 ====================
+
     /**
      * 线索放入公海
      *
@@ -97,13 +99,21 @@ public interface CrmClueService {
     void putCluePool(Long id);
 
     /**
-     * 领取/分配公海线索
+     * 线索主动归还公海（带原因，增加冷却记录）
      *
-     * @param ids         线索编号列表
-     * @param userId      成员编号
-     * @param isReceive   是否为领取
+     * @param id     线索编号
+     * @param reason 归还原因
      */
-    void receiveClue(List<Long> ids, Long userId, Boolean isReceive);
+    void putCluePool(Long id, String reason);
+
+    /**
+     * 领取公海线索
+     *
+     * @param ids         要领取的线索编号数组
+     * @param ownerUserId 负责人
+     * @param isReceive   是/否领取；true - 领取；false - 分配
+     */
+    void receiveClue(List<Long> ids, Long ownerUserId, Boolean isReceive);
 
     /**
      * 获得公海线索数量

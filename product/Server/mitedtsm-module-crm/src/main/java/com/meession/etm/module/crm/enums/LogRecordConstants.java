@@ -68,6 +68,12 @@ public interface LogRecordConstants {
     String CRM_CUSTOMER_POOL_CONFIG_SUB_TYPE = "{{#isPoolConfigUpdate ? '更新客户公海规则' : '创建客户公海规则'}}";
     String CRM_CUSTOMER_POOL_CONFIG_SUCCESS = "{{#isPoolConfigUpdate ? '更新了客户公海规则' : '创建了客户公海规则'}}";
 
+    // ======================= CRM_CLUE_POOL_CONFIG 线索公海规则 =======================
+
+    String CRM_CLUE_POOL_CONFIG_TYPE = "CRM 线索公海规则";
+    String CRM_CLUE_POOL_CONFIG_SUB_TYPE = "{{#isPoolConfigUpdate ? '更新线索公海规则' : '创建线索公海规则'}}";
+    String CRM_CLUE_POOL_CONFIG_SUCCESS = "{{#isPoolConfigUpdate ? '更新了线索公海规则' : '创建了线索公海规则'}}";
+
     // ======================= CRM_CONTACT 联系人 =======================
 
     String CRM_CONTACT_TYPE = "CRM 联系人";

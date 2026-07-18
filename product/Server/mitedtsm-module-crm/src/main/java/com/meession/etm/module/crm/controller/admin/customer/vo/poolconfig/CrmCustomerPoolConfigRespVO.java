@@ -24,4 +24,16 @@ public class CrmCustomerPoolConfigRespVO {
     @Schema(description = "提前提醒天数", example = "2")
     private Integer notifyDays;
 
+    @Schema(description = "客户等级回收时效JSON，格式: {\"A\":30,\"B\":15,\"C\":7}", example = "{\"A\":90,\"B\":30,\"C\":15}")
+    private String levelExpireDays;
+
+    @Schema(description = "是否暂停有合同客户的回收", example = "true")
+    private Boolean pauseContractEnabled;
+
+    @Schema(description = "是否暂停有应收款客户的回收", example = "true")
+    private Boolean pauseReceivableEnabled;
+
+    @Schema(description = "最大延期次数", example = "3")
+    private Integer extendMaxCount;
+
 }

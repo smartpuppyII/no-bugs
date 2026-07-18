@@ -3,6 +3,7 @@ package com.meession.etm.module.crm.controller.admin.clue;
 import cn.hutool.core.collection.CollUtil;
 import com.meession.etm.framework.apilog.core.annotation.ApiAccessLog;
 import com.meession.etm.framework.common.pojo.CommonResult;
+import com.meession.etm.framework.common.pojo.PageParam;
 import com.meession.etm.framework.common.pojo.PageResult;
 import com.meession.etm.framework.common.util.collection.MapUtils;
 import com.meession.etm.framework.common.util.number.NumberUtils;
@@ -14,8 +15,11 @@ import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueRespVO;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueSaveReqVO;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueTransferReqVO;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueDistributeReqVO;
+import com.meession.etm.module.crm.controller.admin.seapool.vo.CrmPoolRecordRespVO;
 import com.meession.etm.module.crm.dal.dataobject.clue.CrmClueDO;
 import com.meession.etm.module.crm.dal.dataobject.customer.CrmCustomerDO;
+import com.meession.etm.module.crm.dal.dataobject.seapool.CrmCluePoolRecordDO;
+import com.meession.etm.module.crm.dal.mysql.seapool.CrmCluePoolRecordMapper;
 import com.meession.etm.module.crm.service.clue.CrmClueService;
 import com.meession.etm.module.crm.service.customer.CrmCustomerService;
 import com.meession.etm.module.crm.service.duplicate.CrmCustomerDuplicateService;
@@ -37,6 +41,8 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.meession.etm.framework.apilog.core.enums.OperateTypeEnum.EXPORT;
@@ -59,6 +65,9 @@ public class CrmClueController {
     private CrmCustomerService customerService;
     @Resource
     private CrmCustomerDuplicateService duplicateService;
+
+    @Resource
+    private CrmCluePoolRecordMapper cluePoolRecordMapper;
 
     @Resource
     private AdminUserApi adminUserApi;
@@ -248,6 +257,65 @@ public class CrmClueController {
     public CommonResult<List<Map<String, Object>>> checkDuplicate(@RequestBody Map<String, String> body) {
         return success(duplicateService.checkDuplicate(
                 body.get("name"), body.get("mobile"), body.get("email"), body.get("wechat"), getLoginUserId()));
+    }
+
+    // ==================== 公海流转记录 ====================
+
+    @GetMapping("/pool-record-page")
+    @Operation(summary = "获得线索公海流转记录分页")
+    @Parameter(name = "clueId", description = "线索编号", required = true)
+    @PreAuthorize("@ss.hasPermission('crm:pool-record:query')")
+    public CommonResult<PageResult<CrmPoolRecordRespVO>> getPoolRecordPage(@Valid PageParam pageParam,
+                                                                            @RequestParam("clueId") Long clueId) {
+        com.baomidou.mybatisplus.core.metadata.IPage<CrmCluePoolRecordDO> mpPage =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(pageParam.getPageNo(), pageParam.getPageSize());
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CrmCluePoolRecordDO> queryWrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CrmCluePoolRecordDO>()
+                        .eq(CrmCluePoolRecordDO::getClueId, clueId)
+                        .orderByDesc(CrmCluePoolRecordDO::getOperateTime);
+        mpPage = cluePoolRecordMapper.selectPage(mpPage, queryWrapper);
+
+        List<Long> userIds = new ArrayList<>();
+        for (CrmCluePoolRecordDO record : mpPage.getRecords()) {
+            if (record.getFromUserId() != null) userIds.add(record.getFromUserId());
+            if (record.getToUserId() != null) userIds.add(record.getToUserId());
+        }
+        Map<Long, String> userMap = new java.util.HashMap<>();
+        for (Long uid : userIds.stream().distinct().collect(Collectors.toList())) {
+            try {
+                AdminUserRespDTO user = adminUserApi.getUser(uid);
+                if (user != null) userMap.put(uid, user.getNickname());
+            } catch (Exception ignored) {}
+        }
+
+        List<CrmPoolRecordRespVO> voList = mpPage.getRecords().stream().map(record -> {
+            CrmPoolRecordRespVO vo = new CrmPoolRecordRespVO();
+            vo.setId(record.getId());
+            vo.setResourceId(record.getClueId());
+            vo.setFromUserId(record.getFromUserId());
+            vo.setFromUserName(userMap.get(record.getFromUserId()));
+            vo.setToUserId(record.getToUserId());
+            vo.setToUserName(userMap.get(record.getToUserId()));
+            vo.setOperateType(record.getOperateType());
+            vo.setOperateTypeName(getOperateTypeName(record.getOperateType()));
+            vo.setReason(record.getReason());
+            vo.setOperateTime(record.getOperateTime());
+            return vo;
+        }).collect(Collectors.toList());
+
+        return success(new PageResult<>(voList, mpPage.getTotal()));
+    }
+
+    private String getOperateTypeName(Integer operateType) {
+        if (operateType == null) return "";
+        switch (operateType) {
+            case 1: return "自动回收";
+            case 2: return "手动退回";
+            case 3: return "主动领取";
+            case 4: return "管理员分配";
+            case 5: return "离职回收";
+            default: return "未知";
+        }
     }
 
 }

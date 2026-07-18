@@ -516,7 +516,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
         path: 'customer/detail/:id',
         name: 'CrmCustomerDetail',
         meta: {
-          title: t('router.crmCustomerDetail'),
+          title: '客户详情',
           noCache: true,
           hidden: true,
           activeMenu: '/crm/customer'

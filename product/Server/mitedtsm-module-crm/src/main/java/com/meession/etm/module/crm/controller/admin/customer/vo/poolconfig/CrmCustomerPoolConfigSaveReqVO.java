@@ -35,6 +35,22 @@ public class CrmCustomerPoolConfigSaveReqVO {
     @DiffLogField(name = "提前提醒天数")
     private Integer notifyDays;
 
+    @Schema(description = "客户等级回收时效JSON，格式: {\"A\":30,\"B\":15,\"C\":7}", example = "{\"A\":90,\"B\":30,\"C\":15}")
+    @DiffLogField(name = "客户等级回收时效")
+    private String levelExpireDays;
+
+    @Schema(description = "是否暂停有合同客户的回收", example = "true")
+    @DiffLogField(name = "是否暂停有合同客户的回收")
+    private Boolean pauseContractEnabled;
+
+    @Schema(description = "是否暂停有应收款客户的回收", example = "true")
+    @DiffLogField(name = "是否暂停有应收款客户的回收")
+    private Boolean pauseReceivableEnabled;
+
+    @Schema(description = "最大延期次数", example = "3")
+    @DiffLogField(name = "最大延期次数")
+    private Integer extendMaxCount;
+
     @AssertTrue(message = "未成交放入公海天数不能为空")
     @JsonIgnore
     public boolean isDealExpireDaysValid() {

@@ -32,8 +32,13 @@ public class CrmPermissionUtils {
      * @return 是/否
      */
     public static boolean isCrmAdmin() {
+        Long userId = getLoginUserId();
+        // 无用户上下文时（如定时任务），视为系统管理员，跳过权限校验
+        if (userId == null) {
+            return true;
+        }
         PermissionCommonApi permissionApi = SpringUtil.getBean(PermissionCommonApi.class);
-        return permissionApi.hasAnyRoles(getLoginUserId(), RoleCodeEnum.CRM_ADMIN.getCode());
+        return permissionApi.hasAnyRoles(userId, RoleCodeEnum.CRM_ADMIN.getCode());
     }
 
     /**

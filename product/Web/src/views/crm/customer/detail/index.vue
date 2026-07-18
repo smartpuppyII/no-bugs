@@ -1,5 +1,19 @@
 <template>
   <CustomerDetailsHeader :customer="customer" :loading="loading">
+    <!-- 回收倒计时状态栏 -->
+    <div v-if="customer.ownerUserId && customer.poolRemainDays !== undefined && customer.poolRemainDays !== null" class="recovery-status-bar">
+      <span v-if="customer.recoveryPaused" class="recovery-paused-tag">
+        <Icon icon="ep:pause" :size="14" />
+        {{ t('recoveryPaused') }}
+        <el-tooltip v-if="customer.pauseReason" :content="customer.pauseReason" placement="top">
+          <Icon icon="ep:question-filled" :size="14" class="ml-4px" />
+        </el-tooltip>
+      </span>
+      <span v-else class="recovery-countdown" :class="customer.poolRemainDays <= 3 ? 'text-red-500 font-bold' : ''">
+        <Icon icon="ep:clock" :size="14" />
+        {{ t('recoveryCountdownStatus') }}：{{ t('daysLater', { day: customer.poolRemainDays }) }}
+      </span>
+    </div>
     <el-button
       v-if="permissionListRef?.validateWrite"
       v-hasPermi="['crm:customer:update']"
@@ -29,6 +43,14 @@
     <el-button v-if="!customer.ownerUserId" type="primary" @click="handleReceive"> {{ t('customer.receive') }}</el-button>
     <el-button v-if="!customer.ownerUserId" type="primary" @click="handleDistributeForm">
       {{ t('customer.assign') }}
+    </el-button>
+    <!-- 归还公海按钮 -->
+    <el-button
+      v-if="customer.ownerUserId && permissionListRef?.validateOwnerUser"
+      type="warning"
+      @click="handleReturnToPool"
+    >
+      {{ t('returnToPool') }}
     </el-button>
     <el-button
       v-if="customer.ownerUserId && permissionListRef?.validateOwnerUser"
@@ -125,6 +147,10 @@
       <el-tab-pane :label="t('customer.attachmentTab')" lazy>
         <AttachmentList :customer-id="customer.id!" />
       </el-tab-pane>
+      <!-- 公海流转记录 Tab -->
+      <el-tab-pane :label="t('poolFlowRecordTab')">
+        <SeaPoolFlowRecord :customer-id="customerId" />
+      </el-tab-pane>
       <el-tab-pane :label="t('customer.operateLogTab')">
         <OperateLogV2 :log-list="logList" />
       </el-tab-pane>
@@ -135,14 +161,36 @@
   <CustomerForm ref="formRef" @success="getCustomer" />
   <CustomerDistributeForm ref="distributeForm" @success="getCustomer" />
   <CrmTransferForm ref="transferFormRef" :biz-type="BizTypeEnum.CRM_CUSTOMER" @success="close" />
+
+  <!-- 归还公海原因弹窗 -->
+  <el-dialog v-model="returnToPoolDialogVisible" :title="t('returnToPool')" width="480px">
+    <el-form ref="returnToPoolFormRef" :model="returnToPoolForm" :rules="returnToPoolRules" label-width="auto">
+      <el-form-item :label="t('returnToPoolReason')" prop="reason">
+        <el-select v-model="returnToPoolForm.reason" class="w-1/1" :placeholder="t('returnToPoolReasonPlaceholder')">
+          <el-option :label="t('returnReasonCannotContact')" value="无法联系" />
+          <el-option :label="t('returnReasonNoIntention')" value="无意向" />
+          <el-option :label="t('returnReasonDealed')" value="已成交" />
+          <el-option :label="t('returnReasonOther')" value="其他" />
+        </el-select>
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button :disabled="returnToPoolLoading" type="primary" @click="confirmReturnToPool">
+        {{ t('common.confirm') }}
+      </el-button>
+      <el-button @click="returnToPoolDialogVisible = false">{{ t('common.cancel') }}</el-button>
+    </template>
+  </el-dialog>
 </template>
 <script lang="ts" setup>
 import { useTagsViewStore } from '@/store/modules/tagsView'
 import * as CustomerApi from '@/api/crm/customer'
+import * as SeaPoolApi from '@/api/crm/seapool'
 import * as TagApi from '@/api/crm/tag'
 import CustomerForm from '@/views/crm/customer/CustomerForm.vue'
 import CustomerDetailsInfo from './CustomerDetailsInfo.vue' // 客户明细 - 详细信息
 import CustomerDetailsHeader from './CustomerDetailsHeader.vue' // 客户明细 - 头部
+import SeaPoolFlowRecord from './SeaPoolFlowRecord.vue' // 公海流转记录
 import ContactList from '@/views/crm/contact/components/ContactList.vue' // 联系人列表
 import ContractList from '@/views/crm/contract/components/ContractList.vue' // 合同列表
 import BusinessList from '@/views/crm/business/components/BusinessList.vue' // 商机列表
@@ -291,6 +339,41 @@ const handlePutPool = async () => {
   close()
 }
 
+// ===== 归还公海 =====
+const returnToPoolDialogVisible = ref(false)
+const returnToPoolLoading = ref(false)
+const returnToPoolFormRef = ref()
+const returnToPoolForm = ref({
+  reason: ''
+})
+const returnToPoolRules = {
+  reason: [{ required: true, message: '请选择归还原因', trigger: 'change' }]
+}
+
+/** 打开归还公海弹窗 */
+const handleReturnToPool = () => {
+  returnToPoolForm.value.reason = ''
+  returnToPoolDialogVisible.value = true
+}
+
+/** 确认归还公海 */
+const confirmReturnToPool = async () => {
+  if (!returnToPoolFormRef.value) return
+  const valid = await returnToPoolFormRef.value.validate()
+  if (!valid) return
+  returnToPoolLoading.value = true
+  try {
+    await message.confirm(t('customer.returnToPoolConfirm', { name: customer.value.name }))
+    await SeaPoolApi.returnCustomerToPool(unref(customerId.value), returnToPoolForm.value.reason)
+    message.success(t('customer.returnToPoolSuccess'))
+    returnToPoolDialogVisible.value = false
+    close()
+  } catch {
+  } finally {
+    returnToPoolLoading.value = false
+  }
+}
+
 /** 获取操作日志 */
 const logList = ref<OperateLogVO[]>([]) // 操作日志列表
 const getOperateLog = async () => {
@@ -328,3 +411,30 @@ onMounted(() => {
   getCustomer()
 })
 </script>
+
+<style lang="scss" scoped>
+.recovery-status-bar {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 12px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  background-color: var(--el-fill-color-light);
+}
+
+.recovery-countdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--el-text-color-regular);
+}
+
+.recovery-paused-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--el-color-warning);
+  font-weight: 500;
+}
+</style>

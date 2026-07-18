@@ -134,8 +134,10 @@ public interface CrmCustomerMapper extends BaseMapperX<CrmCustomerDO> {
         LocalDateTime endContactRemindTime = LocalDateTime.now()
                 .minusDays(Math.max(contactExpireDays - poolConfig.getNotifyDays(), 0));
         query.and(q -> {
-            // 情况一：成交超时提醒
+            // 情况一：成交超时提醒（排除最近跟进过的客户）
             q.between(CrmCustomerDO::getOwnerTime, startDealRemindTime, endDealRemindTime)
+                    .and(p -> p.lt(CrmCustomerDO::getContactLastTime, startDealRemindTime)
+                            .or().isNull(CrmCustomerDO::getContactLastTime))
             // 情况二：跟进超时提醒
             .or(w -> w.between(CrmCustomerDO::getOwnerTime, startContactRemindTime, endContactRemindTime)
                     .and(p -> p.between(CrmCustomerDO::getContactLastTime, startContactRemindTime, endContactRemindTime)
@@ -158,8 +160,10 @@ public interface CrmCustomerMapper extends BaseMapperX<CrmCustomerDO> {
         LocalDateTime dealExpireTime = LocalDateTime.now().minusDays(poolConfig.getDealExpireDays());
         LocalDateTime contactExpireTime = LocalDateTime.now().minusDays(poolConfig.getContactExpireDays());
         query.and(q -> {
-            // 情况一：成交超时
+            // 情况一：成交超时（排除最近跟进过的客户）
             q.lt(CrmCustomerDO::getOwnerTime, dealExpireTime)
+                    .and(p -> p.lt(CrmCustomerDO::getContactLastTime, dealExpireTime)
+                            .or().isNull(CrmCustomerDO::getContactLastTime))
             // 情况二：跟进超时
             .or(w -> w.lt(CrmCustomerDO::getOwnerTime, contactExpireTime)
                     .and(p -> p.lt(CrmCustomerDO::getContactLastTime, contactExpireTime)
@@ -188,6 +192,52 @@ public interface CrmCustomerMapper extends BaseMapperX<CrmCustomerDO> {
         // 未跟进
         query.eq(CrmClueDO::getFollowUpStatus, false);
         return selectCount(query);
+    }
+
+    // ==================== 公海增强查询方法 ====================
+
+    /**
+     * 获得需要自动掉入公海的客户列表（V2：分级回收+豁免+暂停计时）
+     *
+     * @param poolConfig 公海配置
+     * @param expireDays 当前等级对应的回收时效天数
+     * @return 客户列表
+     */
+    default List<CrmCustomerDO> selectListByAutoPoolV2(CrmCustomerPoolConfigDO poolConfig, int expireDays) {
+        LambdaQueryWrapper<CrmCustomerDO> query = new LambdaQueryWrapper<>();
+        // 有负责人
+        query.gt(CrmCustomerDO::getOwnerUserId, 0);
+        // 未锁定 + 未成交
+        query.eq(CrmCustomerDO::getLockStatus, false).eq(CrmCustomerDO::getDealStatus, false);
+        // 倒计时未冻结
+        query.eq(CrmCustomerDO::getCountdownFreeze, false);
+        // 跟进超时：contactLastTime 早于 (now - expireDays) 或为空
+        LocalDateTime expireTime = LocalDateTime.now().minusDays(expireDays);
+        query.and(q -> q.lt(CrmCustomerDO::getContactLastTime, expireTime)
+                .or().isNull(CrmCustomerDO::getContactLastTime));
+        return selectList(query);
+    }
+
+    /**
+     * 乐观锁更新负责人：仅当 ownerUserId 等于 expectedOwnerUserId 时才更新
+     *
+     * @param id                 客户编号
+     * @param newOwnerUserId     新负责人（null 表示放入公海）
+     * @param expectedOwnerUserId 期望的当前负责人
+     * @return 更新行数
+     */
+    default int updateOwnerUserIdByIdWithLock(Long id, Long newOwnerUserId, Long expectedOwnerUserId) {
+        LambdaUpdateWrapper<CrmCustomerDO> wrapper = new LambdaUpdateWrapper<CrmCustomerDO>()
+                .eq(CrmCustomerDO::getId, id);
+        if (expectedOwnerUserId == null) {
+            wrapper.isNull(CrmCustomerDO::getOwnerUserId);
+        } else {
+            wrapper.eq(CrmCustomerDO::getOwnerUserId, expectedOwnerUserId);
+        }
+        return update(new CrmCustomerDO().setId(id).setOwnerUserId(newOwnerUserId)
+                .setPoolStatus(newOwnerUserId == null ? 1 : 0)
+                .setPoolEnterTime(newOwnerUserId == null ? LocalDateTime.now() : null)
+                .setPoolReason(newOwnerUserId == null ? "自动回收" : null), wrapper);
     }
 
 }

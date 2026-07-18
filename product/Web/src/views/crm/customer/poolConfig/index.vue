@@ -53,6 +53,64 @@
               {{ t('poolConfig.notifyDaysBefore') }} <el-input-number class="mx-2" v-model="formData.notifyDays" /> {{ t('poolConfig.notifyDaysAfter') }}
             </el-form-item>
           </div>
+
+          <!-- 客户等级回收时效 -->
+          <el-divider content-position="left">{{ t('poolConfig.levelExpireDaysTitle') }}</el-divider>
+          <el-form-item :label="t('poolConfig.levelExpireDays')">
+            <div class="flex flex-col gap-3">
+              <div class="flex items-center" v-for="level in customerLevels" :key="level.value">
+                <span class="w-80px text-right mr-3">{{ t('poolConfig.levelLabel', { level: level.label }) }}</span>
+                <el-input-number
+                  v-model="levelExpireDaysData[level.value]"
+                  :min="1"
+                  :max="730"
+                  :step="1"
+                  controls-position="right"
+                />
+                <span class="ml-2 text-gray-500">{{ t('poolConfig.day') }}</span>
+              </div>
+            </div>
+            <div class="text-gray-400 text-xs mt-1">
+              {{ t('poolConfig.levelExpireDaysTip') }}
+            </div>
+          </el-form-item>
+
+          <!-- 合同/回款暂停开关 -->
+          <el-divider content-position="left">{{ t('poolConfig.pauseSettingsTitle') }}</el-divider>
+          <el-form-item :label="t('poolConfig.pauseContractEnabled')" prop="pauseContractEnabled">
+            <el-radio-group v-model="formData.pauseContractEnabled" class="ml-4">
+              <el-radio :value="false" size="large">{{ t('poolConfig.notPause') }}</el-radio>
+              <el-radio :value="true" size="large">{{ t('poolConfig.pause') }}</el-radio>
+            </el-radio-group>
+            <div class="text-gray-400 text-xs ml-4 mt-1">
+              {{ t('poolConfig.pauseContractTip') }}
+            </div>
+          </el-form-item>
+          <el-form-item :label="t('poolConfig.pauseReceivableEnabled')" prop="pauseReceivableEnabled">
+            <el-radio-group v-model="formData.pauseReceivableEnabled" class="ml-4">
+              <el-radio :value="false" size="large">{{ t('poolConfig.notPause') }}</el-radio>
+              <el-radio :value="true" size="large">{{ t('poolConfig.pause') }}</el-radio>
+            </el-radio-group>
+            <div class="text-gray-400 text-xs ml-4 mt-1">
+              {{ t('poolConfig.pauseReceivableTip') }}
+            </div>
+          </el-form-item>
+
+          <!-- 最大延期次数 -->
+          <el-divider content-position="left">{{ t('poolConfig.extendSettingsTitle') }}</el-divider>
+          <el-form-item :label="t('poolConfig.extendMaxCount')" prop="extendMaxCount">
+            <el-input-number
+              v-model="formData.extendMaxCount"
+              :min="0"
+              :max="10"
+              :step="1"
+              controls-position="right"
+            />
+            <span class="ml-2 text-gray-500">{{ t('poolConfig.extendMaxCountUnit') }}</span>
+            <div class="text-gray-400 text-xs mt-1">
+              {{ t('poolConfig.extendMaxCountTip') }}
+            </div>
+          </el-form-item>
         </div>
       </el-card>
     </el-form>
@@ -68,17 +126,59 @@ const message = useMessage() // 消息弹窗
 const { t } = useI18n('crm.customer') // 国际化
 
 const formLoading = ref(false)
-const formData = ref({
+const formData = ref<CustomerPoolConfigApi.CustomerPoolConfigVO>({
   enabled: false,
   contactExpireDays: undefined,
   dealExpireDays: undefined,
   notifyEnabled: false,
-  notifyDays: undefined
+  notifyDays: undefined,
+  levelExpireDays: '',
+  pauseContractEnabled: false,
+  pauseReceivableEnabled: false,
+  extendMaxCount: undefined
 })
 const formRules = reactive({
   enabled: [{ required: true, message: t('poolConfig.enabledRequired'), trigger: 'blur' }]
 })
 const formRef = ref() // 表单 Ref
+
+// 客户等级列表（仅A/B/C三级，系统不支持D级客户）
+const customerLevels = [
+  { label: 'A', value: 'A' },
+  { label: 'B', value: 'B' },
+  { label: 'C', value: 'C' }
+]
+
+// 客户等级回收时效数据（双向绑定到独立对象，仅A/B/C三级）
+const levelExpireDaysData = reactive<Record<string, number | undefined>>({
+  A: 90,
+  B: 60,
+  C: 30
+})
+
+// 监听等级回收时效变化，同步到 formData.levelExpireDays
+watch(
+  levelExpireDaysData,
+  (val) => {
+    formData.value.levelExpireDays = JSON.stringify(val)
+  },
+  { deep: true }
+)
+
+/** 解析 levelExpireDays JSON 字符串到 levelExpireDaysData */
+const initLevelExpireDays = (json: string) => {
+  if (!json) return
+  try {
+    const parsed = JSON.parse(json)
+    Object.keys(parsed).forEach((key) => {
+      if (levelExpireDaysData[key] !== undefined) {
+        levelExpireDaysData[key] = parsed[key]
+      }
+    })
+  } catch {
+    // 解析失败，使用默认值
+  }
+}
 
 /** 获取配置 */
 const getConfig = async () => {
@@ -89,6 +189,10 @@ const getConfig = async () => {
       return
     }
     formData.value = data
+    // 初始化等级回收时效
+    if (data.levelExpireDays) {
+      initLevelExpireDays(data.levelExpireDays)
+    }
   } finally {
     formLoading.value = false
   }
@@ -120,6 +224,10 @@ const changeEnable = () => {
     formData.value.dealExpireDays = undefined
     formData.value.notifyEnabled = false
     formData.value.notifyDays = undefined
+    formData.value.levelExpireDays = ''
+    formData.value.pauseContractEnabled = false
+    formData.value.pauseReceivableEnabled = false
+    formData.value.extendMaxCount = undefined
   }
 }
 
@@ -134,3 +242,17 @@ onMounted(() => {
   getConfig()
 })
 </script>
+<style scoped lang="scss">
+.text-gray-400 {
+  color: #9ca3af;
+}
+.text-gray-500 {
+  color: #6b7280;
+}
+.text-xs {
+  font-size: 12px;
+}
+.w-80px {
+  width: 80px;
+}
+</style>

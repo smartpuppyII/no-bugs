@@ -60,6 +60,11 @@ public class CrmClueDO extends BaseDO {
     private Long ownerUserId;
 
     /**
+     * 成为负责人时间
+     */
+    private LocalDateTime ownerTime;
+
+    /**
      * 转化状态
      *
      * true 表示已转换，会更新 {@link #customerId} 字段
@@ -124,5 +129,37 @@ public class CrmClueDO extends BaseDO {
      * 备注
      */
     private String remark;
+
+    // ==================== 公海相关字段 ====================
+
+    /**
+     * 公海状态: 0-非公海(已领取) 1-在公海中
+     */
+    private Integer poolStatus;
+
+    /**
+     * 进入公海时间
+     */
+    private LocalDateTime poolEnterTime;
+
+    /**
+     * 进入公海原因
+     */
+    private String poolReason;
+
+    /**
+     * 延期次数
+     */
+    private Integer extendCount;
+
+    /**
+     * 保护截止时间（新领取后保护期内不可被回收）
+     */
+    private LocalDateTime protectDeadline;
+
+    /**
+     * 保护期归属用户编号
+     */
+    private Long protectUserId;
 
 }

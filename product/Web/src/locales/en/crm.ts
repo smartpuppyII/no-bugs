@@ -138,7 +138,69 @@ export default {
       notify: 'Notify',
       notifyDaysBefore: 'Advance',
       notifyDaysAfter: 'days to notify',
-      enabledRequired: 'Customer pool enabled cannot be empty'
+      enabledRequired: 'Customer pool enabled cannot be empty',
+      // Level-based Expire Days
+      levelExpireDaysTitle: 'Customer Level Recovery Period',
+      levelExpireDays: 'Recovery Period by Level',
+      levelLabel: 'Level {level}',
+      levelExpireDaysTip: 'Different levels can have different recovery periods. Higher levels have longer protection.',
+      day: 'days',
+      // Contract/Receivable Pause
+      pauseSettingsTitle: 'Contract & Receivable Pause Settings',
+      pauseContractEnabled: 'Pause for Active Contracts',
+      pauseContractTip: 'Auto-pause recovery countdown for customers with active contracts, resume after contract expires',
+      pauseReceivableEnabled: 'Pause for Pending Receivables',
+      pauseReceivableTip: 'Auto-pause recovery countdown for customers with pending receivables, resume after payment',
+      notPause: 'Not Pause',
+      pause: 'Pause',
+      // Extension Settings
+      extendSettingsTitle: 'Extension Settings',
+      extendMaxCount: 'Max Extension Count',
+      extendMaxCountUnit: 'times',
+      extendMaxCountTip: 'Maximum extension count per resource. Set to 0 to disable extensions.'
+    },
+    // Pool Recovery Fields
+    recoveryCountdown: 'Recovery Countdown',
+    returnReason: 'Return Reason',
+    returnReasonCannotContact: 'Cannot Contact',
+    returnReasonNoIntention: 'No Intention',
+    returnReasonDealed: 'Dealed',
+    returnReasonOther: 'Other',
+    originalOwner: 'Original Owner',
+    reservationCount: 'Reservation Count',
+    inflowTime: 'Inflow Time',
+    inflowMethod: 'Inflow Method',
+    inflowMethodAuto: 'Auto Recovery',
+    inflowMethodReturn: 'Manual Return',
+    inflowMethodForce: 'Force Recovery',
+    inflowMethodLeave: 'Departure Recovery',
+    coolDown: 'Cooling Down',
+    claimLimitReached: 'Daily claim limit reached ({current}/{max}), resets at 00:00',
+    daysLater: '{day} days to recovery',
+    // Pool Recovery - Return
+    returnToPool: 'Return to Pool',
+    returnToPoolReason: 'Return Reason',
+    returnToPoolReasonPlaceholder: 'Please select return reason',
+    returnToPoolConfirm: 'Confirm returning customer [{name}] to pool? You cannot re-claim during the cooling period.',
+    returnToPoolSuccess: 'Return to pool successfully',
+    // Pool Recovery - Countdown & Pause
+    recoveryPaused: 'Recovery Paused',
+    recoveryCountdownStatus: 'Recovery Countdown',
+    // Pool Recovery - Flow Records
+    poolFlowRecordTab: 'Pool Flow Records',
+    poolFlowRecord: {
+      operationType: 'Operation Type',
+      operatorName: 'Operator',
+      operationTime: 'Operation Time',
+      resourceType: 'Resource Type',
+      resourceName: 'Resource Name',
+      previousOwner: 'Previous Owner',
+      operationReason: 'Reason',
+      operationTypePoolClaim: 'Pool Claim',
+      operationTypeAutoRecovery: 'Auto Recovery',
+      operationTypeManualReturn: 'Manual Return',
+      operationTypeForceRecovery: 'Force Recovery',
+      operationTypeLeaveRecovery: 'Leave Recovery'
     },
     // Batch Operations
     batchLock: 'Batch Lock',
@@ -147,8 +209,61 @@ export default {
     batchAssign: 'Batch Assign',
     batchPutPool: 'Batch Put Pool',
     batchReceive: 'Batch Receive',
+    batchForceRecovery: 'Batch Force Recovery',
     batchPutPoolConfirm: 'Confirm putting {count} selected customers into public pool?',
-    batchReceiveConfirm: 'Confirm receiving {count} selected customers?'
+    batchForceRecoveryConfirm: 'Confirm force recovering {count} selected customers to public pool? This operation ignores exemption rules.',
+    batchReceiveConfirm: 'Confirm receiving {count} selected customers?',
+    // Pool Recovery - Reservation
+    reservationList: 'Reservation List',
+    reserveCustomer: 'Reserve',
+    reserveCustomerSuccess: 'Reserved successfully',
+    cancelReservation: 'Cancel Reservation',
+    cancelReservationSuccess: 'Reservation cancelled',
+    // Pool Recovery - Protection & Claim
+    protectionPeriod: 'Protection Period',
+    protectionPeriodHours: 'Protection Period ({hours}h)',
+    claimConfirmed: 'Claim Confirmed',
+    effectiveFollowUp: 'Effective Follow Up',
+    // Pool Recovery - Force Recovery
+    forceRecoveryReason: 'Force Recovery Reason',
+    forceRecoveryReasonPlaceholder: 'Please enter force recovery reason',
+    forceRecoveryConfirm: 'Confirm force recovery of selected customers? This bypasses exemption and pause rules.',
+    forceRecoverySuccess: 'Force recovery successful',
+    forceRecoveryTip: 'This operation bypasses exemption rules and contract/receivable pause. Please proceed with caution.',
+    // Pool Recovery - Error Messages
+    alreadyClaimed: 'Resource already claimed by another user',
+    poolClaimDisabled: 'Pool claiming has been disabled by admin',
+    expireDaysPositive: 'Recovery days must be greater than 0',
+    expireDaysExceedNotify: 'Recovery days must be greater than notification days',
+    // Pool Recovery - Pause Reason
+    pauseReasonLabel: 'Pause Reason',
+    pauseReasonContract: 'Active contract exists',
+    pauseReasonReceivable: 'Pending receivable plan exists',
+    // Pool Recovery - Permissions
+    permissionAll: 'All',
+    permissionOnlyOwn: 'Only Own',
+    permissionOnlyTeam: 'Only Team',
+    permissionHidden: 'Hidden',
+    permissionAllData: 'All Data',
+    permissionTeamData: 'Team Data'
+  },
+  // Sea Pool Limit Config
+  seaPoolLimitConfig: {
+    title: 'Sea Pool Claim Limit Config',
+    dailyLimitTitle: 'Daily Claim Limit',
+    dailyClueLimit: 'Daily Clue Claim Limit per User',
+    dailyClueLimitUnit: 'clues/day (0-100)',
+    dailyClueLimitTip: 'Maximum clues a user can claim from the clue pool per day. Set to 0 to disable clue pool claiming.',
+    dailyCustomerLimit: 'Daily Customer Claim Limit per User',
+    dailyCustomerLimitUnit: 'customers/day (0-50)',
+    dailyCustomerLimitTip: 'Maximum customers a user can claim from the customer pool per day. Set to 0 to disable customer pool claiming.',
+    protectAndCoolingTitle: 'Claim Protection & Cooling',
+    coolingDays: 'Re-claim Cooling Period',
+    coolingDaysUnit: 'days (0-90)',
+    coolingDaysTip: 'Minimum interval before a user can re-claim the same resource after returning it',
+    protectHours: 'Post-claim Protection Period',
+    protectHoursUnit: 'hours (0-168)',
+    protectHoursTip: 'Resource is visible only to the claimer within N hours after claiming'
   },
   contact: {
     title: 'Contact',
@@ -572,7 +687,87 @@ export default {
     batchTransform: 'Batch Transform',
     batchDelete: 'Batch Delete',
     batchDeleteConfirm: 'Confirm deleting {count} selected clues?',
-    batchTransformConfirm: 'Confirm transforming {count} selected clues to customers?'
+    batchTransformConfirm: 'Confirm transforming {count} selected clues to customers?',
+    // Pool Recovery Fields
+    receive: 'Receive Clue',
+    receiveConfirm: 'Confirm receiving clue [{name}]?',
+    receiveSuccess: 'Receive clue [{name}] successfully',
+    receiveLimitReached: 'Daily claim limit reached ({current}/{max}), resets at 00:00',
+    assignTitle: 'Assign Clue',
+    assignSuccess: 'Assign clue successfully',
+    putPool: 'Put Into Pool',
+    putPoolConfirm: 'Confirm putting clue [{name}] into pool? After putting into pool, other colleagues can claim it.',
+    putPoolSuccess: 'Clue [{name}] has been put into pool',
+    recoveryCountdown: 'Recovery Countdown',
+    returnReason: 'Return Reason',
+    originalOwner: 'Original Owner',
+    reservationCount: 'Reservation Count',
+    inflowMethod: 'Inflow Method',
+    inflowMethodAuto: 'Auto Recovery',
+    inflowMethodReturn: 'Manual Return',
+    inflowMethodForce: 'Force Recovery',
+    inflowMethodLeave: 'Departure Recovery',
+    coolDown: 'Cooling Down',
+    // Return to Pool
+    returnToPool: 'Return to Pool',
+    returnToPoolReason: 'Return Reason',
+    returnToPoolReasonPlaceholder: 'Please select return reason',
+    returnToPoolReasonRequired: 'Please select return reason',
+    returnToPoolConfirm: 'Confirm returning clue [{name}] to pool? You will need to wait for the cooldown period to claim it again.',
+    returnToPoolSuccess: 'Return to pool successfully',
+    returnReasonCannotContact: 'Cannot Contact',
+    returnReasonNoIntention: 'No Intention',
+    returnReasonDealed: 'Deal Closed',
+    returnReasonOther: 'Other',
+    // Recovery Countdown
+    recoveryPaused: 'Recovery Paused',
+    // Pool Recovery - Reservation
+    reservationList: 'Reservation List',
+    reserveClue: 'Reserve',
+    reserveClueSuccess: 'Reserved successfully',
+    cancelReservation: 'Cancel Reservation',
+    cancelReservationSuccess: 'Reservation cancelled',
+    // Pool Recovery - Return
+    putPoolReason: 'Return Reason',
+    putPoolReasonPlaceholder: 'Please select return reason',
+    // Pool Recovery - Countdown
+    daysLater: '{day} days to recovery',
+    // Pool Recovery - Flow Records
+    poolFlowRecordTab: 'Pool Flow Records',
+    poolFlowRecord: {
+      operationType: 'Operation Type',
+      operatorName: 'Operator',
+      operationTime: 'Operation Time',
+      resourceType: 'Resource Type',
+      resourceName: 'Resource Name',
+      previousOwner: 'Previous Owner',
+      operationReason: 'Reason',
+      operationTypePoolClaim: 'Pool Claim',
+      operationTypeAutoRecovery: 'Auto Recovery',
+      operationTypeManualReturn: 'Manual Return',
+      operationTypeForceRecovery: 'Force Recovery',
+      operationTypeLeaveRecovery: 'Leave Recovery'
+    },
+    // Clue Pool Rule Config
+    cluePoolConfig: {
+      title: 'Clue Pool Rule Settings',
+      enabled: 'Clue Pool Rule',
+      notEnabled: 'Not Enabled',
+      enabledText: 'Enabled',
+      clueExpireDays: 'Clue Auto Recovery Period',
+      clueExpireDaysUnit: 'days (1-90)',
+      followUpResetEnabled: 'Follow-up Reset Countdown',
+      notReset: 'Not Reset',
+      reset: 'Reset',
+      followUpResetTip: 'When enabled, each new follow-up record resets the recovery countdown',
+      aLevelExemptEnabled: 'A-Level Clue Exemption',
+      notExempt: 'Not Exempt',
+      exempt: 'Exempt',
+      aLevelExemptTip: 'When enabled, A-level clues are not auto-recovered, only generate backlog alerts',
+      notifyDays: 'Pre-reminder Days',
+      notifyDaysUnit: 'days (1-7)',
+      notifyDaysTip: 'Start generating backlog alerts N days before expiration'
+    }
   },
   permission: {
     title: 'Team Members',
@@ -648,7 +843,20 @@ export default {
     // List fields
     expiryType: 'Expiry Type',
     contractStatus: 'Contract Status',
-    remindType: 'Remind Type'
+    remindType: 'Remind Type',
+    // Pool Recovery Actions
+    remainingDays: 'Remaining Days',
+    extension: 'Extension',
+    followUp: 'Follow Up',
+    batchExtension: 'Batch Extension',
+    extensionDays: 'Extension Days',
+    extensionDays7: '7 Days',
+    extensionDays15: '15 Days',
+    extensionDays30: '30 Days',
+    extensionSuccess: 'Extension successful',
+    extensionConfirm: 'Confirm extending selected customers by {day} days?',
+    extensionMaxReached: 'Max extension limit reached, please follow up ASAP',
+    noPermissionExtension: 'No permission to extend, only sales and above can operate'
   },
   statistics: {
     title: 'Statistics',
@@ -866,7 +1074,19 @@ export default {
     newBusiness: 'New Business',
     newContract: 'New Contract',
     backlog: 'Backlog',
-    customerMgmt: 'Customer Mgmt'
+    customerMgmt: 'Customer Mgmt',
+    // Sea Pool Overview
+    seaPoolOverview: 'Sea Pool Overview',
+    seaPoolTotal: 'Total Pool Resources',
+    seaPoolTotalClue: 'Clues',
+    seaPoolTotalCustomer: 'Customers',
+    weeklyRecovery: 'Weekly Recovery',
+    weeklyRecoveryUp: '+{change}% vs last week',
+    weeklyRecoveryDown: '{change}% vs last week',
+    conversionRate: 'Conversion Rate',
+    upcomingRecovery: 'Upcoming Recovery',
+    clickToView: 'Click to view details',
+    seaPoolEmpty: 'No sea pool data'
   },
   // Handover
   handover: {

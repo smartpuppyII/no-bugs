@@ -19,6 +19,15 @@
       {{ t('clue.transform') }}
     </el-button>
     <el-button v-if="clue.transformStatus" disabled type="success">{{ t('clue.transformStatusYes') }}</el-button>
+    <!-- 归还公海按钮 -->
+    <el-button
+      v-if="permissionListRef?.validateOwnerUser"
+      v-hasPermi="['crm:clue:update']"
+      type="warning"
+      @click="handleReturnToPool"
+    >
+      {{ t('clue.returnToPool') }}
+    </el-button>
   </ClueDetailsHeader>
   <el-col>
     <el-tabs>
@@ -37,6 +46,9 @@
           @quit-team="close"
         />
       </el-tab-pane>
+      <el-tab-pane :label="t('clue.poolFlowRecordTab')">
+        <CluePoolFlowRecordList :clue-id="clueId" />
+      </el-tab-pane>
       <el-tab-pane :label="t('clue.operateLogTab')">
         <OperateLogV2 :log-list="logList" />
       </el-tab-pane>
@@ -46,6 +58,26 @@
   <!-- 表单弹窗：添加/修改 -->
   <ClueForm ref="formRef" @success="getClue" />
   <CrmTransferForm ref="transferFormRef" :biz-type="BizTypeEnum.CRM_CLUE" @success="close" />
+
+  <!-- 归还公海弹窗 -->
+  <el-dialog v-model="returnPoolDialogVisible" :title="t('clue.returnToPool')" width="480px" :close-on-click-modal="false">
+    <el-form ref="returnPoolFormRef" :model="returnPoolForm" :rules="returnPoolRules" label-width="100px">
+      <el-form-item :label="t('clue.returnToPoolReason')" prop="reason">
+        <el-select v-model="returnPoolForm.reason" :placeholder="t('clue.returnToPoolReasonPlaceholder')" class="!w-full">
+          <el-option :label="t('clue.returnReasonCannotContact')" value="cannot_contact" />
+          <el-option :label="t('clue.returnReasonNoIntention')" value="no_intention" />
+          <el-option :label="t('clue.returnReasonDealed')" value="dealed" />
+          <el-option :label="t('clue.returnReasonOther')" value="other" />
+        </el-select>
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="returnPoolDialogVisible = false">{{ t('common.cancel') }}</el-button>
+      <el-button type="primary" :loading="returnPoolLoading" @click="confirmReturnToPool">
+        {{ t('common.confirm') }}
+      </el-button>
+    </template>
+  </el-dialog>
 </template>
 <script lang="ts" setup>
 import { useTagsViewStore } from '@/store/modules/tagsView'
@@ -56,6 +88,7 @@ import ClueDetailsInfo from './ClueDetailsInfo.vue' // 线索明细 - 详细信�
 import PermissionList from '@/views/crm/permission/components/PermissionList.vue' // 团队成员列表（权限）
 import CrmTransferForm from '@/views/crm/permission/components/TransferForm.vue'
 import FollowUpList from '@/views/crm/followup/index.vue'
+import CluePoolFlowRecordList from './CluePoolFlowRecordList.vue' // 公海流转记录
 import { BizTypeEnum } from '@/api/crm/permission'
 import type { OperateLogVO } from '@/api/system/operatelog'
 import { getOperateLogPage } from '@/api/crm/operateLog'
@@ -102,6 +135,36 @@ const handleTransform = async () => {
   await ClueApi.transformClue(clueId.value)
   message.success(t('clue.transformSuccess'))
   await getClue()
+}
+
+/** 归还公海 */
+const returnPoolDialogVisible = ref(false)
+const returnPoolLoading = ref(false)
+const returnPoolFormRef = ref()
+const returnPoolForm = reactive({
+  reason: ''
+})
+const returnPoolRules = {
+  reason: [{ required: true, message: t('clue.returnToPoolReasonRequired'), trigger: 'change' }]
+}
+const handleReturnToPool = () => {
+  returnPoolForm.reason = ''
+  returnPoolDialogVisible.value = true
+}
+const confirmReturnToPool = async () => {
+  const valid = await returnPoolFormRef.value?.validate().catch(() => false)
+  if (!valid) return
+  try {
+    await message.confirm(t('clue.returnToPoolConfirm', { name: clue.value.name }))
+    returnPoolLoading.value = true
+    await ClueApi.returnClueToPool(clueId.value, returnPoolForm.reason)
+    message.success(t('clue.returnToPoolSuccess'))
+    returnPoolDialogVisible.value = false
+    close()
+  } catch {
+  } finally {
+    returnPoolLoading.value = false
+  }
 }
 
 /** 获取操作日志 */

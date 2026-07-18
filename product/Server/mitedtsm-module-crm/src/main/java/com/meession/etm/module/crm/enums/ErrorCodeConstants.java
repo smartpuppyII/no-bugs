@@ -116,4 +116,14 @@ public interface ErrorCodeConstants {
     // ========== 竞争对手 模块 ==========
     ErrorCode COMPETITOR_NOT_EXISTS = new ErrorCode(1_020_016_000, "竞争对手不存在");
 
+    // ========== 公海增强模块 1-02-10-000 ==========
+    ErrorCode CUSTOMER_SEA_POOL_CONFLICT = new ErrorCode(1_02_10_001, "客户({}) 已被其他用户领取，请刷新后重试");
+    ErrorCode CUSTOMER_DAILY_RECEIVE_LIMIT_EXCEEDED = new ErrorCode(1_02_10_002, "今日已领取 {} 个客户，已达上限 {} 个");
+    ErrorCode CUSTOMER_IN_COOLING_PERIOD = new ErrorCode(1_02_10_003, "客户({}) 在冷却期内，暂时无法领取");
+    ErrorCode CLUE_SEA_POOL_CONFLICT = new ErrorCode(1_02_10_004, "线索({}) 已被其他用户领取，请刷新后重试");
+    ErrorCode CLUE_DAILY_RECEIVE_LIMIT_EXCEEDED = new ErrorCode(1_02_10_005, "今日已领取 {} 条线索，已达上限 {} 条");
+    ErrorCode CLUE_IN_COOLING_PERIOD = new ErrorCode(1_02_10_006, "线索({}) 在冷却期内，暂时无法领取");
+    ErrorCode SEA_POOL_CONFIG_NOT_EXISTS = new ErrorCode(1_02_10_007, "公海配置不存在");
+    ErrorCode POOL_CUSTOMER_OWNER_LIMIT_EXCEEDED = new ErrorCode(1_02_10_008, "客户数量已达上限，无法领取");
+
 }

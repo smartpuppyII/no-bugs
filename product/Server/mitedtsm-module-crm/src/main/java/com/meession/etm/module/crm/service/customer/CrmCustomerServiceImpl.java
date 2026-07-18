@@ -19,8 +19,13 @@ import com.meession.etm.module.crm.dal.dataobject.contract.CrmContractDO;
 import com.meession.etm.module.crm.dal.dataobject.customer.CrmCustomerDO;
 import com.meession.etm.module.crm.dal.dataobject.customer.CrmCustomerLimitConfigDO;
 import com.meession.etm.module.crm.dal.dataobject.customer.CrmCustomerPoolConfigDO;
+import com.meession.etm.module.crm.dal.dataobject.seapool.CrmCustomerPoolRecordDO;
+import com.meession.etm.module.crm.dal.dataobject.seapool.CrmSeaPoolDailyLimitDO;
+import com.meession.etm.module.crm.dal.dataobject.seapool.CrmSeaPoolLimitConfigDO;
 import com.meession.etm.module.crm.dal.dataobject.transfer.CrmTransferLogDO;
 import com.meession.etm.module.crm.dal.mysql.customer.CrmCustomerMapper;
+import com.meession.etm.module.crm.dal.mysql.seapool.CrmCustomerPoolRecordMapper;
+import com.meession.etm.module.crm.dal.mysql.seapool.CrmSeaPoolDailyLimitMapper;
 import com.meession.etm.module.crm.enums.common.CrmBizTypeEnum;
 import com.meession.etm.module.crm.enums.common.CrmSceneTypeEnum;
 import com.meession.etm.module.crm.enums.permission.CrmPermissionLevelEnum;
@@ -47,6 +52,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.*;
 
 import static com.meession.etm.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -98,6 +104,15 @@ public class CrmCustomerServiceImpl implements CrmCustomerService {
 
     @Resource
     private CrmTransferLogService transferLogService;
+
+    // ==================== 公海增强依赖 ====================
+    @Resource
+    private CrmCustomerPoolRecordMapper customerPoolRecordMapper;
+    @Resource
+    private CrmSeaPoolDailyLimitMapper seaPoolDailyLimitMapper;
+    @Resource
+    @Lazy
+    private com.meession.etm.module.crm.service.seapool.CrmSeaPoolLimitConfigService seaPoolLimitConfigService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -414,11 +429,90 @@ public class CrmCustomerServiceImpl implements CrmCustomerService {
         // 1.3. 校验客户是否锁定
         validateCustomerIsLocked(customer, true);
 
+        Long originalOwnerUserId = customer.getOwnerUserId();
+
         // 2. 客户放入公海
-        putCustomerPool(customer);
+        putCustomerPoolInternal(customer);
+
+        // 3. 记录流转日志（系统自动回收）
+        customerPoolRecordMapper.insert(CrmCustomerPoolRecordDO.builder()
+                .customerId(customer.getId())
+                .fromUserId(originalOwnerUserId)
+                .toUserId(null)
+                .operateType(1) // 自动回收
+                .reason("系统自动回收")
+                .operateTime(LocalDateTime.now())
+                .build());
 
         // 记录操作日志上下文
         LogRecordContext.putVariable("customerName", customer.getName());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    @LogRecord(type = CRM_CUSTOMER_TYPE, subType = CRM_CUSTOMER_POOL_SUB_TYPE, bizNo = "{{#id}}",
+            success = CRM_CUSTOMER_POOL_SUCCESS)
+    @CrmPermission(bizType = CrmBizTypeEnum.CRM_CUSTOMER, bizId = "#id", level = CrmPermissionLevelEnum.OWNER)
+    public void putCustomerPool(Long id, String reason) {
+        // 1. 校验存在
+        CrmCustomerDO customer = customerMapper.selectById(id);
+        if (customer == null) {
+            throw exception(CUSTOMER_NOT_EXISTS);
+        }
+        // 1.2. 校验是否为公海数据
+        validateCustomerOwnerExists(customer, true);
+        // 1.3. 校验客户是否锁定
+        validateCustomerIsLocked(customer, true);
+
+        Long originalOwnerUserId = customer.getOwnerUserId();
+
+        // 2. 客户放入公海
+        putCustomerPoolInternal(customer);
+
+        // 3. 记录冷却记录（流转日志）
+        customerPoolRecordMapper.insert(CrmCustomerPoolRecordDO.builder()
+                .customerId(customer.getId())
+                .fromUserId(originalOwnerUserId)
+                .toUserId(null)
+                .operateType(2) // 手动退回
+                .reason(reason != null ? reason : "主动归还")
+                .operateTime(LocalDateTime.now())
+                .build());
+
+        // 记录操作日志上下文
+        LogRecordContext.putVariable("customerName", customer.getName());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void batchForceReclaim(List<Long> ids, Long operatorUserId, String reason) {
+        // 1.1 校验存在
+        List<CrmCustomerDO> customers = customerMapper.selectByIds(ids);
+        if (customers.size() != ids.size()) {
+            throw exception(CUSTOMER_NOT_EXISTS);
+        }
+
+        // 1.2 逐条校验并强制回收（不受A类豁免和合同/回款暂停限制）
+        for (CrmCustomerDO customer : customers) {
+            // 主管强制回收不受锁定限制
+            if (customer.getOwnerUserId() == null) {
+                log.warn("[batchForceReclaim][客户({}) 已在公海中，跳过]", customer.getId());
+                continue;
+            }
+
+            // 强制回收
+            putCustomerPoolInternal(customer);
+
+            // 记录流转日志
+            customerPoolRecordMapper.insert(CrmCustomerPoolRecordDO.builder()
+                    .customerId(customer.getId())
+                    .fromUserId(customer.getOwnerUserId())
+                    .toUserId(null)
+                    .operateType(4) // 管理员分配（强制回收）
+                    .reason("主管强制回收：" + (reason != null ? reason : "未填写原因"))
+                    .operateTime(LocalDateTime.now())
+                    .build());
+        }
     }
 
     @Override
@@ -431,7 +525,11 @@ public class CrmCustomerServiceImpl implements CrmCustomerService {
         }
         // 1.2 校验负责人是否存在
         adminUserApi.validateUserList(singletonList(ownerUserId));
-        // 1.3 校验状态
+
+        // 1.3 校验每日领取上限
+        validateDailyReceiveLimit(ownerUserId, customers.size());
+
+        // 1.4 校验状态
         customers.forEach(customer -> {
             // 校验是否已有负责人
             validateCustomerOwnerExists(customer, false);
@@ -439,39 +537,62 @@ public class CrmCustomerServiceImpl implements CrmCustomerService {
             validateCustomerIsLocked(customer, false);
             // 校验成交状态
             validateCustomerDeal(customer);
+            // 校验冷却时间
+            validateCoolingPeriod(customer.getId(), ownerUserId);
         });
-        // 1.4  校验负责人是否到达上限
+
+        // 1.5 校验负责人是否到达上限
         validateCustomerExceedOwnerLimit(ownerUserId, customers.size());
 
-        // 2. 领取公海数据
-        List<CrmCustomerDO> updateCustomers = new ArrayList<>();
+        // 2. 领取公海数据（乐观锁并发控制）
+        CrmSeaPoolLimitConfigDO limitConfig = seaPoolLimitConfigService.getLimitConfig();
+        int protectHours = (limitConfig != null && limitConfig.getProtectHours() != null)
+                ? limitConfig.getProtectHours() : 24;
+        LocalDateTime protectDeadline = LocalDateTime.now().plusHours(protectHours);
+
         List<CrmPermissionCreateReqBO> createPermissions = new ArrayList<>();
-        customers.forEach(customer -> {
-            // 2.1. 设置负责人
-            updateCustomers.add(new CrmCustomerDO().setId(customer.getId())
-                    .setOwnerUserId(ownerUserId).setOwnerTime(LocalDateTime.now()));
-            // 2.2. 创建负责人数据权限
+        for (CrmCustomerDO customer : customers) {
+            // 2.1 乐观锁更新：仅在 ownerUserId 为 null 时才能领取
+            int updated = customerMapper.updateOwnerUserIdByIdWithLock(customer.getId(), ownerUserId, null);
+            if (updated == 0) {
+                throw exception(CUSTOMER_SEA_POOL_CONFLICT, customer.getName());
+            }
+            // 2.2 更新保护期和领取时间
+            customerMapper.updateById(new CrmCustomerDO().setId(customer.getId())
+                    .setOwnerTime(LocalDateTime.now())
+                    .setPoolStatus(0));
+            // 2.3 创建负责人数据权限
             createPermissions.add(new CrmPermissionCreateReqBO().setBizType(CrmBizTypeEnum.CRM_CUSTOMER.getType())
                     .setBizId(customer.getId()).setUserId(ownerUserId).setLevel(CrmPermissionLevelEnum.OWNER.getLevel()));
-        });
-        // 2.2 更新客户负责人
-        customerMapper.updateBatch(updateCustomers);
-        // 2.3 创建负责人数据权限
+        }
+        // 2.4 创建负责人数据权限
         permissionService.createPermissionBatch(createPermissions);
-        // TODO @芋艿：要不要处理关联的联系人？？？
 
-        // 3. 记录操作日志
+        // 2.5 更新每日领取计数
+        updateDailyReceiveCount(ownerUserId, 1, customers.size());
+
+        // 3. 记录操作日志和流转日志
         AdminUserRespDTO user = null;
         if (!isReceive) {
             user = adminUserApi.getUser(ownerUserId);
         }
         for (CrmCustomerDO customer : customers) {
             getSelf().receiveCustomerLog(customer, user == null ? null : user.getNickname());
+            // 记录流转日志
+            customerPoolRecordMapper.insert(CrmCustomerPoolRecordDO.builder()
+                    .customerId(customer.getId())
+                    .fromUserId(null) // 公海无归属
+                    .toUserId(ownerUserId)
+                    .operateType(3) // 主动领取
+                    .reason("从公海领取")
+                    .operateTime(LocalDateTime.now())
+                    .build());
         }
     }
 
     @Override
     public int autoPutCustomerPool() {
+        // V2 版本：此方法已由 CrmCustomerAutoPutPoolJob 重构，保留兼容
         CrmCustomerPoolConfigDO poolConfig = customerPoolConfigService.getCustomerPoolConfig();
         if (poolConfig == null || !poolConfig.getEnabled()) {
             return 0;
@@ -482,7 +603,7 @@ public class CrmCustomerServiceImpl implements CrmCustomerService {
         int count = 0;
         for (CrmCustomerDO customer : customerList) {
             try {
-                getSelf().putCustomerPool(customer);
+                getSelf().putCustomerPoolInternal(customer);
                 count++;
             } catch (Throwable e) {
                 log.error("[autoPutCustomerPool][客户({}) 放入公海异常]", customer.getId(), e);
@@ -492,20 +613,76 @@ public class CrmCustomerServiceImpl implements CrmCustomerService {
     }
 
     @Transactional(rollbackFor = Exception.class) // 需要 protected 修饰，因为需要在事务中调用
-    protected void putCustomerPool(CrmCustomerDO customer) {
+    protected void putCustomerPoolInternal(CrmCustomerDO customer) {
         // 1. 设置负责人为 NULL
         int updateOwnerUserIncr = customerMapper.updateOwnerUserIdById(customer.getId(), null);
         if (updateOwnerUserIncr == 0) {
             throw exception(CUSTOMER_UPDATE_OWNER_USER_FAIL);
         }
 
-        // 2. 联系人的负责人，也要设置为 null。因为：因为领取后，负责人也要关联过来，这块和 receiveCustomer 是对应的
+        // 2. 更新公海状态
+        customerMapper.updateById(new CrmCustomerDO().setId(customer.getId())
+                .setPoolStatus(1).setPoolEnterTime(LocalDateTime.now()));
+
+        // 3. 联系人的负责人，也要设置为 null。因为：因为领取后，负责人也要关联过来，这块和 receiveCustomer 是对应的
         contactService.updateOwnerUserIdByCustomerId(customer.getId(), null);
 
-        // 3. 删除负责人数据权限
+        // 4. 删除负责人数据权限
         // 注意：需要放在 contactService 后面，不然【客户】数据权限已经被删除，无法操作！
         permissionService.deletePermission(CrmBizTypeEnum.CRM_CUSTOMER.getType(), customer.getId(),
                 CrmPermissionLevelEnum.OWNER.getLevel());
+    }
+
+    // ==================== 公海校验增强方法 ====================
+
+    /**
+     * 校验每日领取上限
+     */
+    private void validateDailyReceiveLimit(Long userId, int newCount) {
+        CrmSeaPoolLimitConfigDO limitConfig = seaPoolLimitConfigService.getLimitConfig();
+        if (limitConfig == null || limitConfig.getDailyCustomerLimit() == null) {
+            return;
+        }
+        int dailyLimit = limitConfig.getDailyCustomerLimit();
+        LocalDate today = LocalDate.now();
+
+        CrmSeaPoolDailyLimitDO todayLimit = seaPoolDailyLimitMapper.selectByUserAndDate(userId, 1, today);
+        int todayCount = todayLimit != null ? todayLimit.getCount() : 0;
+        if (todayCount + newCount > dailyLimit) {
+            throw exception(CUSTOMER_DAILY_RECEIVE_LIMIT_EXCEEDED, todayCount, dailyLimit);
+        }
+    }
+
+    /**
+     * 校验冷却时间
+     */
+    private void validateCoolingPeriod(Long customerId, Long userId) {
+        CrmSeaPoolLimitConfigDO limitConfig = seaPoolLimitConfigService.getLimitConfig();
+        if (limitConfig == null || limitConfig.getCoolingDays() == null || limitConfig.getCoolingDays() <= 0) {
+            return;
+        }
+        int coolingDays = limitConfig.getCoolingDays();
+        CrmCustomerPoolRecordDO lastReturn = customerPoolRecordMapper.selectLastReturnByCustomerIdAndUserId(customerId, userId);
+        if (lastReturn != null) {
+            LocalDateTime coolingEnd = lastReturn.getOperateTime().plusDays(coolingDays);
+            if (LocalDateTime.now().isBefore(coolingEnd)) {
+                throw exception(CUSTOMER_IN_COOLING_PERIOD, customerId);
+            }
+        }
+    }
+
+    /**
+     * 更新每日领取计数
+     */
+    private void updateDailyReceiveCount(Long userId, int resourceType, int delta) {
+        LocalDate today = LocalDate.now();
+        CrmSeaPoolDailyLimitDO todayLimit = seaPoolDailyLimitMapper.selectByUserAndDate(userId, resourceType, today);
+        if (todayLimit == null) {
+            seaPoolDailyLimitMapper.insert(CrmSeaPoolDailyLimitDO.builder()
+                    .userId(userId).resourceType(resourceType).count(delta).limitDate(today).build());
+        } else {
+            seaPoolDailyLimitMapper.incrementCount(todayLimit.getId(), delta);
+        }
     }
 
     @LogRecord(type = CRM_CUSTOMER_TYPE, subType = CRM_CUSTOMER_RECEIVE_SUB_TYPE, bizNo = "{{#customer.id}}",

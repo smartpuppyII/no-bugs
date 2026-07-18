@@ -141,7 +141,69 @@ export default {
       notify: '提醒',
       notifyDaysBefore: '提前',
       notifyDaysAfter: '天提醒',
-      enabledRequired: '是否启用客户公海不能为空'
+      enabledRequired: '是否启用客户公海不能为空',
+      // 客户等级回收时效
+      levelExpireDaysTitle: '客户等级回收时效',
+      levelExpireDays: '各等级回收时效',
+      levelLabel: '{level}级客户',
+      levelExpireDaysTip: '不同等级的客户可设置不同的回收时效，等级越高保护期越长',
+      day: '天',
+      // 合同/回款暂停
+      pauseSettingsTitle: '合同/回款暂停设置',
+      pauseContractEnabled: '未到期合同暂停计时',
+      pauseContractTip: '存在未到期合同的客户自动暂停回收计时，合同到期后恢复',
+      pauseReceivableEnabled: '待回款计划暂停计时',
+      pauseReceivableTip: '存在待回款记录的客户自动暂停回收计时，回款完成后恢复',
+      notPause: '不暂停',
+      pause: '暂停',
+      // 延期设置
+      extendSettingsTitle: '延期设置',
+      extendMaxCount: '最大延期次数',
+      extendMaxCountUnit: '次',
+      extendMaxCountTip: '同一资源累计延期次数上限，达到上限后延期按钮置灰。设为0表示不允许延期'
+    },
+    // 公海回收机制 - 列表字段
+    recoveryCountdown: '回收倒计时',
+    returnReason: '归还原因',
+    returnReasonCannotContact: '无法联系',
+    returnReasonNoIntention: '无意向',
+    returnReasonDealed: '已成交',
+    returnReasonOther: '其他',
+    originalOwner: '原归属销售',
+    reservationCount: '预约人数',
+    inflowTime: '流入时间',
+    inflowMethod: '流入方式',
+    inflowMethodAuto: '自动回收',
+    inflowMethodReturn: '主动归还',
+    inflowMethodForce: '强制回收',
+    inflowMethodLeave: '离职回收',
+    coolDown: '冷却中',
+    claimLimitReached: '今日领取已达上限（{current}/{max}），次日00:00重置',
+    daysLater: '{day}天后回收',
+    // 公海回收 - 归还
+    returnToPool: '归还公海',
+    returnToPoolReason: '归还原因',
+    returnToPoolReasonPlaceholder: '请选择归还原因',
+    returnToPoolConfirm: '确定将客户【{name}】归还公海吗？归还后需等待冷却期结束才能再次领取。',
+    returnToPoolSuccess: '归还公海成功',
+    // 公海回收 - 倒计时与暂停
+    recoveryPaused: '暂停回收',
+    recoveryCountdownStatus: '回收倒计时',
+    // 公海回收 - 流转记录
+    poolFlowRecordTab: '公海流转记录',
+    poolFlowRecord: {
+      operationType: '操作类型',
+      operatorName: '操作人',
+      operationTime: '操作时间',
+      resourceType: '资源类型',
+      resourceName: '资源名称',
+      previousOwner: '原归属销售',
+      operationReason: '操作原因',
+      operationTypePoolClaim: '公海领取',
+      operationTypeAutoRecovery: '自动回收',
+      operationTypeManualReturn: '主动归还',
+      operationTypeForceRecovery: '强制回收',
+      operationTypeLeaveRecovery: '离职回收'
     },
     // 批量操作
     batchLock: '批量锁定',
@@ -150,8 +212,61 @@ export default {
     batchAssign: '批量分配',
     batchPutPool: '批量放入公海',
     batchReceive: '批量领取',
+    batchForceRecovery: '批量回收至公海',
     batchPutPoolConfirm: '确认将选中的 {count} 个客户放入公海？',
-    batchReceiveConfirm: '确认领取选中的 {count} 个客户？'
+    batchForceRecoveryConfirm: '确认将选中的 {count} 个客户强制回收至公海？此操作不受豁免规则限制。',
+    batchReceiveConfirm: '确认领取选中的 {count} 个客户？',
+    // 公海回收 - 预约关注
+    reservationList: '预约人列表',
+    reserveCustomer: '预约关注',
+    reserveCustomerSuccess: '预约关注成功',
+    cancelReservation: '取消预约',
+    cancelReservationSuccess: '取消预约成功',
+    // 公海回收 - 保护期与确权
+    protectionPeriod: '保护期',
+    protectionPeriodHours: '保护期（{hours}小时）',
+    claimConfirmed: '确权成功',
+    effectiveFollowUp: '有效跟进',
+    // 公海回收 - 强制回收
+    forceRecoveryReason: '强制回收原因',
+    forceRecoveryReasonPlaceholder: '请填写强制回收原因',
+    forceRecoveryConfirm: '确定将选中的客户强制回收至公海？此操作不受豁免规则和合同/回款暂停限制。',
+    forceRecoverySuccess: '强制回收成功',
+    forceRecoveryTip: '此操作不受豁免规则和合同/回款暂停限制，请谨慎操作',
+    // 公海回收 - 异常提示
+    alreadyClaimed: '该资源已被其他用户领取',
+    poolClaimDisabled: '管理员已关闭公海领取功能',
+    expireDaysPositive: '回收时效必须大于0',
+    expireDaysExceedNotify: '回收时效不得小于预热提醒天数',
+    // 公海回收 - 暂停原因
+    pauseReasonLabel: '暂停原因',
+    pauseReasonContract: '存在未到期合同',
+    pauseReasonReceivable: '存在待回款计划',
+    // 公海回收 - 权限相关
+    permissionAll: '全部',
+    permissionOnlyOwn: '仅自有',
+    permissionOnlyTeam: '仅团队',
+    permissionHidden: '隐藏',
+    permissionAllData: '全量',
+    permissionTeamData: '团队'
+  },
+  // 公海领取限制配置
+  seaPoolLimitConfig: {
+    title: '公海领取限制配置',
+    dailyLimitTitle: '每日领取上限',
+    dailyClueLimit: '单用户每日线索领取上限',
+    dailyClueLimitUnit: '条/天（0-100）',
+    dailyClueLimitTip: '每人每日从线索公海领取的最大线索数，设为0则关闭线索公海领取功能',
+    dailyCustomerLimit: '单用户每日客户领取上限',
+    dailyCustomerLimitUnit: '条/天（0-50）',
+    dailyCustomerLimitTip: '每人每日从客户公海领取的最大客户数，设为0则关闭客户公海领取功能',
+    protectAndCoolingTitle: '领取保护与冷却',
+    coolingDays: '重复领取冷却时间',
+    coolingDaysUnit: '天（0-90）',
+    coolingDaysTip: '同一条资源被同一用户归还后再次领取的最小间隔天数',
+    protectHours: '领取后保护期时长',
+    protectHoursUnit: '小时（0-168）',
+    protectHoursTip: '领取后N小时内仅领取人可见，他人不可重复领取'
   },
   contact: {
     title: '联系人',
@@ -641,17 +756,108 @@ export default {
     receive: '领取线索',
     receiveConfirm: '确定领取线索【{name}】吗？',
     receiveSuccess: '领取线索【{name}】成功',
+    receiveLimitReached: '今日领取已达上限（{current}/{max}），次日00:00重置',
     assignTitle: '分配线索',
     assignSuccess: '分配线索成功',
     putPool: '放入公海',
     putPoolConfirm: '确定将线索【{name}】放入公海吗？放入公海后，其他同事可以领取该线索。',
     putPoolSuccess: '线索【{name}】已放入公海',
+    // 公海回收字段
+    recoveryCountdown: '回收倒计时',
+    returnReason: '归还原因',
+    originalOwner: '原归属销售',
+    reservationCount: '预约人数',
+    inflowMethod: '流入方式',
+    inflowMethodAuto: '自动回收',
+    inflowMethodReturn: '主动归还',
+    inflowMethodForce: '强制回收',
+    inflowMethodLeave: '离职回收',
+    coolDown: '冷却中',
+    // 归还公海
+    returnToPool: '归还公海',
+    returnToPoolReason: '归还原因',
+    returnToPoolReasonPlaceholder: '请选择归还原因',
+    returnToPoolReasonRequired: '请选择归还原因',
+    returnToPoolConfirm: '确定将线索【{name}】归还公海吗？归还后需等待冷却期结束才能再次领取。',
+    returnToPoolSuccess: '归还公海成功',
+    returnReasonCannotContact: '无法联系',
+    returnReasonNoIntention: '无意向',
+    returnReasonDealed: '已成交',
+    returnReasonOther: '其他',
+    // 回收倒计时
+    recoveryPaused: '暂停回收',
+    daysLater: '{day}天后回收',
+    // 公海流转记录
+    poolFlowRecordTab: '公海流转记录',
+    poolFlowRecord: {
+      operationType: '操作类型',
+      operatorName: '操作人',
+      operationTime: '操作时间',
+      resourceType: '资源类型',
+      resourceName: '资源名称',
+      previousOwner: '原归属销售',
+      operationReason: '操作原因',
+      operationTypePoolClaim: '公海领取',
+      operationTypeAutoRecovery: '自动回收',
+      operationTypeManualReturn: '主动归还',
+      operationTypeForceRecovery: '强制回收',
+      operationTypeLeaveRecovery: '离职回收'
+    },
+    // 公海回收 - 预约关注
+    reservationList: '预约人列表',
+    reserveClue: '预约关注',
+    reserveClueSuccess: '预约关注成功',
+    cancelReservation: '取消预约',
+    cancelReservationSuccess: '取消预约成功',
+    // 公海回收 - 归还
+    putPoolReason: '归还原因',
+    putPoolReasonPlaceholder: '请选择归还原因',
+    // 公海回收 - 倒计时
+    daysLater: '{day}天后回收',
+    // 公海回收 - 流转记录
+    poolFlowRecordTab: '公海流转记录',
+    poolFlowRecord: {
+      operationType: '操作类型',
+      operatorName: '操作人',
+      operationTime: '操作时间',
+      resourceType: '资源类型',
+      resourceName: '资源名称',
+      previousOwner: '原归属销售',
+      operationReason: '操作原因',
+      operationTypePoolClaim: '公海领取',
+      operationTypeAutoRecovery: '自动回收',
+      operationTypeManualReturn: '主动归还',
+      operationTypeForceRecovery: '强制回收',
+      operationTypeLeaveRecovery: '离职回收'
+    },
     // 批量操作
     batchAssign: '批量分配',
     batchTransform: '批量转为客户',
     batchDelete: '批量删除',
+    batchPutPool: '批量放入公海',
+    batchPutPoolConfirm: '确认将选中的 {count} 条线索放入公海？',
     batchDeleteConfirm: '确认删除选中的 {count} 条线索？',
-    batchTransformConfirm: '确认将选中的 {count} 条线索转为客户？'
+    batchTransformConfirm: '确认将选中的 {count} 条线索转为客户？',
+    // 线索公海规则配置
+    cluePoolConfig: {
+      title: '线索公海规则设置',
+      enabled: '线索公海规则设置',
+      notEnabled: '不启用',
+      enabledText: '启用',
+      clueExpireDays: '线索自动回收时效',
+      clueExpireDaysUnit: '天（1-90天）',
+      followUpResetEnabled: '跟进记录重置倒计时',
+      notReset: '不重置',
+      reset: '重置',
+      followUpResetTip: '开启后，每次新增跟进记录自动重置回收倒计时',
+      aLevelExemptEnabled: 'A类重点线索豁免',
+      notExempt: '不豁免',
+      exempt: '豁免',
+      aLevelExemptTip: '开启后，A类线索不触发自动回收，仅持续生成待办预警',
+      notifyDays: '预热提醒天数',
+      notifyDaysUnit: '天（1-7天）',
+      notifyDaysTip: '到期前N天开始生成待办预警并推送提醒'
+    }
   },
   task: {
     title: '任务管理',
@@ -732,7 +938,20 @@ export default {
     // 列表字段
     expiryType: '到期状态',
     contractStatus: '合同状态',
-    remindType: '提醒类型'
+    remindType: '提醒类型',
+    // 公海回收操作
+    remainingDays: '剩余天数',
+    extension: '延期',
+    followUp: '跟进',
+    batchExtension: '批量延期',
+    extensionDays: '延期天数',
+    extensionDays7: '7天',
+    extensionDays15: '15天',
+    extensionDays30: '30天',
+    extensionSuccess: '延期成功',
+    extensionConfirm: '确认将选中客户延期{day}天？',
+    extensionMaxReached: '该资源已达最大延期次数，请尽快跟进',
+    noPermissionExtension: '无权限延期，仅普通销售及以上可操作'
   },
   statistics: {
     title: '统计分析',
@@ -950,7 +1169,19 @@ export default {
     newBusiness: '新增商机',
     newContract: '新增合同',
     backlog: '待办事项',
-    customerMgmt: '客户管理'
+    customerMgmt: '客户管理',
+    // 公海概览
+    seaPoolOverview: '公海概览',
+    seaPoolTotal: '公海资源总量',
+    seaPoolTotalClue: '线索',
+    seaPoolTotalCustomer: '客户',
+    weeklyRecovery: '本周回收数',
+    weeklyRecoveryUp: '环比上周 +{change}%',
+    weeklyRecoveryDown: '环比上周 {change}%',
+    conversionRate: '领取转化率',
+    upcomingRecovery: '即将回收预警',
+    clickToView: '点击查看详情',
+    seaPoolEmpty: '暂无公海数据'
   },
   // 离职交接
   handover: {

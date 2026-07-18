@@ -173,11 +173,28 @@ public interface CrmCustomerService {
     // ==================== 公海相关操作 ====================
 
     /**
-     * 客户放入公海
+     * 客户放入公海（原有方法，系统自动回收用）
      *
      * @param id 客户编号
      */
     void putCustomerPool(Long id);
+
+    /**
+     * 主动归还公海（带原因，记录冷却）
+     *
+     * @param id     客户编号
+     * @param reason 归还原因
+     */
+    void putCustomerPool(Long id, String reason);
+
+    /**
+     * 主管批量强制回收至公海
+     *
+     * @param ids            客户编号列表
+     * @param operatorUserId 操作人（主管）
+     * @param reason         回收原因
+     */
+    void batchForceReclaim(List<Long> ids, Long operatorUserId, String reason);
 
     /**
      * 领取公海客户

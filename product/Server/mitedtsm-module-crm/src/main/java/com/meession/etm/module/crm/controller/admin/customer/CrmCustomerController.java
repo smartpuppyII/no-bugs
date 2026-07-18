@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.map.MapUtil;
 import com.meession.etm.framework.apilog.core.annotation.ApiAccessLog;
 import com.meession.etm.framework.common.pojo.CommonResult;
+import com.meession.etm.framework.common.pojo.PageParam;
 import com.meession.etm.framework.common.pojo.PageResult;
 import com.meession.etm.framework.common.util.collection.CollectionUtils;
 import com.meession.etm.framework.common.util.collection.MapUtils;
@@ -13,8 +14,11 @@ import com.meession.etm.framework.common.util.object.BeanUtils;
 import com.meession.etm.framework.excel.core.util.ExcelUtils;
 import com.meession.etm.framework.ip.core.utils.AreaUtils;
 import com.meession.etm.module.crm.controller.admin.customer.vo.customer.*;
+import com.meession.etm.module.crm.controller.admin.seapool.vo.CrmPoolRecordRespVO;
 import com.meession.etm.module.crm.dal.dataobject.customer.CrmCustomerDO;
 import com.meession.etm.module.crm.dal.dataobject.customer.CrmCustomerPoolConfigDO;
+import com.meession.etm.module.crm.dal.dataobject.seapool.CrmCustomerPoolRecordDO;
+import com.meession.etm.module.crm.dal.mysql.seapool.CrmCustomerPoolRecordMapper;
 import com.meession.etm.module.crm.service.customer.CrmCustomerPoolConfigService;
 import com.meession.etm.module.crm.service.customer.CrmCustomerService;
 import com.meession.etm.module.crm.service.tag.CrmTagService;
@@ -42,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 import static com.meession.etm.framework.apilog.core.enums.OperateTypeEnum.EXPORT;
 import static com.meession.etm.framework.common.pojo.CommonResult.success;
@@ -69,6 +74,9 @@ public class CrmCustomerController {
     private CrmTagService tagService;
     @Resource
     private CrmCustomerDuplicateService customerDuplicateService;
+
+    @Resource
+    private CrmCustomerPoolRecordMapper customerPoolRecordMapper;
 
     @PostMapping("/create")
     @Operation(summary = "创建客户")
@@ -439,6 +447,68 @@ public class CrmCustomerController {
             customerService.putCustomerPool(id);
         }
         return success(true);
+    }
+
+    // ==================== 公海流转记录 ====================
+
+    @GetMapping("/pool-record-page")
+    @Operation(summary = "获得客户公海流转记录分页")
+    @Parameter(name = "customerId", description = "客户编号", required = true)
+    @PreAuthorize("@ss.hasPermission('crm:pool-record:query')")
+    public CommonResult<PageResult<CrmPoolRecordRespVO>> getPoolRecordPage(@Valid PageParam pageParam,
+                                                                            @RequestParam("customerId") Long customerId) {
+        // 查询流转记录
+        com.baomidou.mybatisplus.core.metadata.IPage<CrmCustomerPoolRecordDO> mpPage =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(pageParam.getPageNo(), pageParam.getPageSize());
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CrmCustomerPoolRecordDO> queryWrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CrmCustomerPoolRecordDO>()
+                        .eq(CrmCustomerPoolRecordDO::getCustomerId, customerId)
+                        .orderByDesc(CrmCustomerPoolRecordDO::getOperateTime);
+        mpPage = customerPoolRecordMapper.selectPage(mpPage, queryWrapper);
+
+        // 批量获取用户名称
+        List<Long> userIds = new ArrayList<>();
+        for (CrmCustomerPoolRecordDO record : mpPage.getRecords()) {
+            if (record.getFromUserId() != null) userIds.add(record.getFromUserId());
+            if (record.getToUserId() != null) userIds.add(record.getToUserId());
+        }
+        Map<Long, String> userMap = new java.util.HashMap<>();
+        for (Long uid : userIds.stream().distinct().collect(Collectors.toList())) {
+            try {
+                AdminUserRespDTO user = adminUserApi.getUser(uid);
+                if (user != null) userMap.put(uid, user.getNickname());
+            } catch (Exception ignored) {}
+        }
+
+        // 转换VO
+        List<CrmPoolRecordRespVO> voList = mpPage.getRecords().stream().map(record -> {
+            CrmPoolRecordRespVO vo = new CrmPoolRecordRespVO();
+            vo.setId(record.getId());
+            vo.setResourceId(record.getCustomerId());
+            vo.setFromUserId(record.getFromUserId());
+            vo.setFromUserName(userMap.get(record.getFromUserId()));
+            vo.setToUserId(record.getToUserId());
+            vo.setToUserName(userMap.get(record.getToUserId()));
+            vo.setOperateType(record.getOperateType());
+            vo.setOperateTypeName(getOperateTypeName(record.getOperateType()));
+            vo.setReason(record.getReason());
+            vo.setOperateTime(record.getOperateTime());
+            return vo;
+        }).collect(Collectors.toList());
+
+        return success(new PageResult<>(voList, mpPage.getTotal()));
+    }
+
+    private String getOperateTypeName(Integer operateType) {
+        if (operateType == null) return "";
+        switch (operateType) {
+            case 1: return "自动回收";
+            case 2: return "手动退回";
+            case 3: return "主动领取";
+            case 4: return "管理员分配";
+            case 5: return "离职回收";
+            default: return "未知";
+        }
     }
 
 }
