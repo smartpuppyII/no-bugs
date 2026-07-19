@@ -98,6 +98,11 @@ export const submitContract = async (id: number) => {
   return await request.put({ url: `/crm/contract/submit?id=${id}` })
 }
 
+// 重置审批状态为草稿
+export const resetContractAudit = async (id: number) => {
+  return await request.put({ url: `/crm/contract/reset-audit?id=${id}` })
+}
+
 // 合同转移
 export const transferContract = async (data: TransferReqVO) => {
   return await request.put({ url: '/crm/contract/transfer', data })

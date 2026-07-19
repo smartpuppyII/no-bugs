@@ -126,15 +126,11 @@
         min-width="180"
       />
       <el-table-column align="center" :label="t('common.creator')" prop="creatorName" min-width="100" />
-      <el-table-column align="center" fixed="right" :label="t('common.action')" min-width="180">
+      <el-table-column align="center" fixed="right" :label="t('common.action')" width="220">
         <template #default="scope">
-          <el-button
-            v-hasPermi="['crm:receivable:create']"
-            link
-            type="success"
-            @click="openReceivableForm(scope.row)"
-            :disabled="scope.row.receivableId"
-          >
+          <el-button link type="primary" @click="openDetail(scope.row.id)">{{ t('common.view') }}</el-button>
+          <el-button v-hasPermi="['crm:receivable:create']" link type="success"
+            @click="openReceivableForm(scope.row)" :disabled="scope.row.receivableId">
             {{ t('backlog.createReceivable') }}
           </el-button>
         </template>
@@ -150,7 +146,7 @@
   </ContentWrap>
 
   <!-- 表单弹窗：添加/修改 -->
-  <ReceivableForm ref="receivableFormRef" @success="getList" />
+  <ReceivableForm ref="receivableFormRef" @success="onReceivableSuccess" />
 </template>
 
 <script setup lang="ts">
@@ -160,10 +156,13 @@ import * as ReceivablePlanApi from '@/api/crm/receivable/plan'
 import { RECEIVABLE_REMIND_TYPE } from './common'
 import { erpPriceInputFormatter, erpPriceTableColumnFormatter } from '@/utils'
 import ReceivableForm from '@/views/crm/receivable/ReceivableForm.vue'
+import { emitBadgeRefresh } from '@/hooks/web/useCrmBadgeEvent'
 
 defineOptions({ name: 'ReceivablePlanRemindList' })
 
 const { t } = useI18n('crm') // 国际化
+
+const refreshBacklogCount = inject<() => void>('refreshBacklogCount', () => {})
 const loading = ref(true) // 列表的加载中
 const total = ref(0) // 列表的总页数
 const list = ref([]) // 列表的数据
@@ -195,6 +194,12 @@ const handleQuery = () => {
 const receivableFormRef = ref()
 const openReceivableForm = (row: ReceivablePlanApi.ReceivablePlanVO) => {
   receivableFormRef.value.open('create', undefined, row)
+}
+
+/** 创建回款成功：刷新列表、侧边栏计数、菜单红点 */
+const onReceivableSuccess = () => {
+  getList()
+  refreshBacklogCount()
 }
 
 /** 打开详情 */

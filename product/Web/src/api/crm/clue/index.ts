@@ -111,3 +111,13 @@ export const batchDeleteClue = async (ids: number[]) => {
 export const batchTransformClue = async (ids: number[]) => {
   return await request.put({ url: '/crm/clue/batch-transform', data: ids })
 }
+
+// 获取线索导入模板
+export const importClueTemplate = () => {
+  return request.download({ url: '/crm/clue/get-import-template' })
+}
+
+// 导入线索 Excel
+export const handleImport = async (formData: FormData) => {
+  return await request.upload({ url: '/crm/clue/import', data: formData })
+}

@@ -7,9 +7,7 @@ import com.meession.etm.framework.common.pojo.PageParam;
 import com.meession.etm.framework.common.pojo.PageResult;
 import com.meession.etm.framework.common.util.object.BeanUtils;
 import com.meession.etm.framework.excel.core.util.ExcelUtils;
-import com.meession.etm.module.erp.controller.admin.product.vo.product.ErpProductPageReqVO;
-import com.meession.etm.module.erp.controller.admin.product.vo.product.ErpProductRespVO;
-import com.meession.etm.module.erp.controller.admin.product.vo.product.ProductSaveReqVO;
+import com.meession.etm.module.erp.controller.admin.product.vo.product.*;
 import com.meession.etm.module.erp.dal.dataobject.product.ErpProductDO;
 import com.meession.etm.module.erp.service.product.ErpProductService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,6 +21,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 import static com.meession.etm.framework.apilog.core.enums.OperateTypeEnum.EXPORT;
@@ -100,6 +99,60 @@ public class ErpProductController {
         // 导出 Excel
         ExcelUtils.write(response, "产品.xls", "数据", ErpProductRespVO.class,
                 pageResult.getList());
+    }
+
+    // ==================== 批量操作 ====================
+
+    @DeleteMapping("/batch-delete")
+    @Operation(summary = "批量删除产品")
+    @Parameter(name = "ids", description = "编号数组", required = true, example = "1,2,3")
+    @PreAuthorize("@ss.hasPermission('erp:product:delete')")
+    public CommonResult<Boolean> batchDeleteProduct(@RequestParam("ids") List<Long> ids) {
+        productService.batchDeleteProduct(ids);
+        return success(true);
+    }
+
+    @PutMapping("/batch-update")
+    @Operation(summary = "批量修改产品")
+    @PreAuthorize("@ss.hasPermission('erp:product:update')")
+    public CommonResult<Boolean> batchUpdateProduct(@Valid @RequestBody ErpProductBatchUpdateReqVO reqVO) {
+        productService.batchUpdateProduct(reqVO);
+        return success(true);
+    }
+
+    // ==================== 导入 ====================
+
+    @GetMapping("/get-import-template")
+    @Operation(summary = "获得导入产品模板")
+    public void importTemplate(HttpServletResponse response) throws IOException {
+        // 手动创建导出 demo
+        List<ErpProductImportExcelVO> list = Arrays.asList(
+                ErpProductImportExcelVO.builder().name("示例产品A").barCode("P001")
+                        .categoryId(null).unitId(null).standard("红色")
+                        .purchasePrice(new java.math.BigDecimal("10.00"))
+                        .salePrice(new java.math.BigDecimal("20.00"))
+                        .minPrice(new java.math.BigDecimal("15.00"))
+                        .expiryDay(30).weight(new java.math.BigDecimal("1.00"))
+                        .status(0).remark("批量导入示例").build(),
+                ErpProductImportExcelVO.builder().name("示例产品B").barCode("P002")
+                        .categoryId(null).unitId(null).standard("蓝色")
+                        .purchasePrice(new java.math.BigDecimal("12.00"))
+                        .salePrice(new java.math.BigDecimal("25.00"))
+                        .minPrice(new java.math.BigDecimal("18.00"))
+                        .expiryDay(60).weight(new java.math.BigDecimal("2.00"))
+                        .status(0).remark("批量导入示例").build()
+        );
+        // 输出
+        ExcelUtils.write(response, "产品导入模板.xls", "产品列表", ErpProductImportExcelVO.class, list);
+    }
+
+    @PostMapping("/import")
+    @Operation(summary = "导入产品")
+    @PreAuthorize("@ss.hasPermission('erp:product:create')")
+    public CommonResult<Boolean> importExcel(@Valid ErpProductImportReqVO importReqVO) throws Exception {
+        List<ErpProductImportExcelVO> list = ExcelUtils.read(importReqVO.getFile(), ErpProductImportExcelVO.class);
+        productService.importProductList(list);
+        return success(true);
     }
 
 }

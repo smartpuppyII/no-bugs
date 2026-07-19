@@ -211,13 +211,14 @@
           <dict-tag :type="DICT_TYPE.CRM_AUDIT_STATUS" :value="scope.row.auditStatus" />
         </template>
       </el-table-column>
-      <el-table-column fixed="right" :label="t('common.action')" min-width="250">
+      <el-table-column fixed="right" :label="t('common.action')" width="400">
         <template #default="scope">
           <el-button
             v-if="scope.row.auditStatus === 0"
             v-hasPermi="['crm:contract:update']"
             link
             type="primary"
+            size="small"
             @click="openForm('update', scope.row.id)"
           >
             {{ t('common.edit') }}
@@ -226,24 +227,37 @@
             v-if="scope.row.auditStatus === 0"
             v-hasPermi="['crm:contract:update']"
             link
-            type="primary"
+            type="success"
+            size="small"
             @click="handleSubmit(scope.row)"
           >
             {{ t('crm.contract.submitAudit') }}
           </el-button>
           <el-button
-            v-else
+            v-if="scope.row.processInstanceId"
             link
             v-hasPermi="['crm:contract:update']"
             type="primary"
+            size="small"
             @click="handleProcessDetail(scope.row)"
           >
             {{ t('crm.contract.viewApproval') }}
           </el-button>
           <el-button
+            v-if="scope.row.auditStatus !== 0"
+            link
+            v-hasPermi="['crm:contract:update']"
+            type="warning"
+            size="small"
+            @click="handleReset(scope.row)"
+          >
+            重置
+          </el-button>
+          <el-button
             v-hasPermi="['crm:contract:query']"
             link
             type="primary"
+            size="small"
             @click="openDetail(scope.row.id)"
           >
             {{ t('common.detail') }}
@@ -252,6 +266,7 @@
             v-hasPermi="['crm:contract:delete']"
             link
             type="danger"
+            size="small"
             @click="handleDelete(scope.row.id)"
           >
             {{ t('common.del') }}
@@ -372,6 +387,16 @@ const handleSubmit = async (row: ContractApi.ContractVO) => {
   await ContractApi.submitContract(row.id)
   message.success(t('crm.contract.submitAuditSuccess'))
   await getList()
+}
+
+/** 重置审批状态 */
+const handleReset = async (row: ContractApi.ContractVO) => {
+  try {
+    await message.confirm(`确认将合同【${row.name}】重置为草稿状态？重置后需重新提交审批。`)
+    await ContractApi.resetContractAudit(row.id)
+    message.success('合同已重置为草稿，请重新提交审批')
+    await getList()
+  } catch {}
 }
 
 /** 查看审批 */

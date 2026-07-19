@@ -179,6 +179,14 @@ public class CrmContractController {
         return success(true);
     }
 
+    @PutMapping("/reset-audit")
+    @Operation(summary = "重置合同审批状态为草稿")
+    @PreAuthorize("@ss.hasPermission('crm:contract:update')")
+    public CommonResult<Boolean> resetContractAuditStatus(@RequestParam("id") Long id) {
+        contractService.resetContractAuditStatus(id);
+        return success(true);
+    }
+
     private List<CrmContractRespVO> buildContractDetailList(List<CrmContractDO> contractList) {
         if (CollUtil.isEmpty(contractList)) {
             return Collections.emptyList();

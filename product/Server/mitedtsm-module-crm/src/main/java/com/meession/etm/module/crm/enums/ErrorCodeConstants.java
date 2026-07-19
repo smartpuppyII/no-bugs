@@ -16,6 +16,7 @@ public interface ErrorCodeConstants {
     ErrorCode CONTRACT_UPDATE_AUDIT_STATUS_FAIL_NOT_PROCESS = new ErrorCode(1_020_000_003, "更新合同审核状态失败，原因：合同不是审核中状态");
     ErrorCode CONTRACT_NO_EXISTS = new ErrorCode(1_020_000_004, "生成合同序列号重复，请重试");
     ErrorCode CONTRACT_DELETE_FAIL = new ErrorCode(1_020_000_005, "删除合同失败，原因：有被回款所使用");
+    ErrorCode CONTRACT_RESET_AUDIT_FAIL = new ErrorCode(1_020_000_006, "重置合同审批状态失败，原因：合同不是审批中状态");
 
     // ========== 线索管理 1-020-001-000 ==========
     ErrorCode CLUE_NOT_EXISTS = new ErrorCode(1_020_001_000, "线索不存在");
@@ -115,5 +116,19 @@ public interface ErrorCodeConstants {
 
     // ========== 竞争对手 模块 ==========
     ErrorCode COMPETITOR_NOT_EXISTS = new ErrorCode(1_020_016_000, "竞争对手不存在");
+
+    // ========== 报价单管理 1_020_017_000 ==========
+    ErrorCode QUOTATION_NOT_EXISTS = new ErrorCode(1_020_017_000, "报价单不存在");
+    ErrorCode QUOTATION_UPDATE_FAIL_NOT_DRAFT = new ErrorCode(1_020_017_001, "报价单更新失败，原因：报价单不是草稿状态");
+    ErrorCode QUOTATION_NO_EXISTS = new ErrorCode(1_020_017_002, "生成报价单序列号重复，请重试");
+    ErrorCode QUOTATION_DELETE_FAIL = new ErrorCode(1_020_017_003, "删除报价单失败");
+    ErrorCode QUOTATION_SUBMIT_FAIL_NOT_DRAFT = new ErrorCode(1_020_017_004, "报价单提交审核失败，原因：报价单没处在未提交状态");
+    ErrorCode QUOTATION_UPDATE_AUDIT_STATUS_FAIL_NOT_PROCESS = new ErrorCode(1_020_017_005, "更新报价单审核状态失败，原因：报价单不是审核中状态");
+
+    // ========== 离职申请管理 1_020_018_000 ==========
+    ErrorCode LEAVE_APPLY_NOT_EXISTS = new ErrorCode(1_020_018_000, "离职申请不存在");
+    ErrorCode LEAVE_APPLY_UPDATE_FAIL_NOT_DRAFT = new ErrorCode(1_020_018_001, "离职申请更新失败，原因：离职申请不是草稿状态");
+    ErrorCode LEAVE_APPLY_SUBMIT_FAIL_NOT_DRAFT = new ErrorCode(1_020_018_002, "离职申请提交审核失败，原因：离职申请没处在未提交状态");
+    ErrorCode LEAVE_APPLY_UPDATE_AUDIT_STATUS_FAIL_NOT_PROCESS = new ErrorCode(1_020_018_003, "更新离职申请审核状态失败，原因：离职申请不是审核中状态");
 
 }

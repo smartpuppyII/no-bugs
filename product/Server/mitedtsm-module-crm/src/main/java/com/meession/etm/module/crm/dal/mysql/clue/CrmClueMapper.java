@@ -65,4 +65,8 @@ public interface CrmClueMapper extends BaseMapperX<CrmClueDO> {
                 .isNull(CrmClueDO::getOwnerUserId));
     }
 
+    default CrmClueDO selectByName(String name) {
+        return selectOne(CrmClueDO::getName, name);
+    }
+
 }

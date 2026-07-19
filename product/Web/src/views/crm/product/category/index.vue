@@ -71,7 +71,7 @@
           >
             {{ t('common.delete') }}
           </el-button>
-        </template>
+</template>
       </el-table-column>
     </el-table>
   </ContentWrap>

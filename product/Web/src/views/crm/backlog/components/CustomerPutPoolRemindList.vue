@@ -2,6 +2,12 @@
 <template>
   <ContentWrap>
     <div class="pb-5 text-xl">{{ t('backlog.customerPutPoolRemind') }}</div>
+    <el-alert
+      type="warning"
+      :closable="false"
+      description="以下客户即将因超过设定天数未跟进/未成交而进入公海池。及时跟进可避免客户被回收至公海供他人领取。"
+      class="mb-15px"
+    />
     <!-- 搜索工作区 -->
     <el-form
       ref="queryFormRef"
@@ -101,6 +107,12 @@
         min-width="180"
       />
       <el-table-column align="center" :label="t('common.creator')" prop="creatorName" min-width="100" />
+      <el-table-column :label="t('common.action')" align="center" fixed="right" width="140">
+        <template #default="scope">
+          <el-button link type="primary" @click="openDetail(scope.row.id)">{{ t('common.view') }}</el-button>
+          <el-button link type="success" @click="handleFollowUp(scope.row)">{{ t('crm.followUp.createFollowUp') }}</el-button>
+        </template>
+      </el-table-column>
     </el-table>
     <!-- 分页 -->
     <Pagination
@@ -110,6 +122,7 @@
       @pagination="getList"
     />
   </ContentWrap>
+  <FollowUpRecordForm ref="followUpFormRef" @success="onFollowUpSuccess" />
 </template>
 
 <script lang="ts" setup>
@@ -117,10 +130,14 @@ import * as CustomerApi from '@/api/crm/customer'
 import { DICT_TYPE } from '@/utils/dict'
 import { dateFormatter } from '@/utils/formatTime'
 import { SCENE_TYPES } from './common'
+import FollowUpRecordForm from '@/views/crm/followup/FollowUpRecordForm.vue'
+import { emitBadgeRefresh } from '@/hooks/web/useCrmBadgeEvent'
 
 defineOptions({ name: 'CrmCustomerPutPoolRemindList' })
 
 const { t } = useI18n('crm') // 国际化
+
+const refreshBacklogCount = inject<() => void>('refreshBacklogCount', () => {})
 const loading = ref(true) // 列表的加载中
 const total = ref(0) // 列表的总页数
 const list = ref([]) // 列表的数据
@@ -153,6 +170,15 @@ const handleQuery = () => {
 const { push } = useRouter()
 const openDetail = (id: number) => {
   push({ name: 'CrmCustomerDetail', params: { id } })
+}
+
+const followUpFormRef = ref()
+const handleFollowUp = (row: any) => { followUpFormRef.value.open(2, row.id) }
+
+/** 跟进成功：刷新列表、侧边栏计数、菜单红点 */
+const onFollowUpSuccess = () => {
+  getList()
+  refreshBacklogCount()
 }
 
 /** 激活时 */

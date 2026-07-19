@@ -92,7 +92,7 @@
           >
             {{ scope.row.customerName }}
           </el-link>
-        </template>
+</template>
       </el-table-column>
       <el-table-column align="center" :label="t('receivablePlan.contractNo')" prop="contractNo" min-width="200" />
       <el-table-column align="center" :label="t('receivablePlan.period')" prop="period">
@@ -100,7 +100,7 @@
           <el-link :underline="false" type="primary" @click="openDetail(scope.row.id)">
             {{ scope.row.period }}
           </el-link>
-        </template>
+</template>
       </el-table-column>
       <el-table-column
         align="center"
@@ -127,7 +127,7 @@
       <el-table-column align="center" :label="t('receivablePlan.returnType')" prop="returnType" min-width="130">
         <template #default="scope">
           <dict-tag :type="DICT_TYPE.CRM_RECEIVABLE_RETURN_TYPE" :value="scope.row.returnType" />
-        </template>
+</template>
       </el-table-column>
       <el-table-column align="center" :label="t('receivablePlan.remark')" prop="remark" />
       <el-table-column :label="t('receivablePlan.ownerUserName')" prop="ownerUserName" min-width="120" />
@@ -142,7 +142,7 @@
             {{ erpPriceInputFormatter(scope.row.receivable.price) }}
           </el-text>
           <el-text v-else>{{ erpPriceInputFormatter(0) }}</el-text>
-        </template>
+</template>
       </el-table-column>
       <el-table-column
         align="center"
@@ -162,7 +162,7 @@
             {{ erpPriceInputFormatter(scope.row.price - scope.row.receivable.price) }}
           </el-text>
           <el-text v-else>{{ erpPriceInputFormatter(scope.row.price) }}</el-text>
-        </template>
+</template>
       </el-table-column>
       <el-table-column
         :formatter="dateFormatter"
@@ -179,7 +179,7 @@
         min-width="180"
       />
       <el-table-column align="center" :label="t('receivablePlan.creatorName')" prop="creatorName" min-width="100" />
-      <el-table-column align="center" fixed="right" :label="t('common.action')" min-width="180">
+      <el-table-column align="center" fixed="right" :label="t('common.action')" width="260">
         <template #default="scope">
           <el-button
             v-hasPermi="['crm:receivable:create']"
@@ -206,7 +206,7 @@
           >
             {{ t('common.delete') }}
           </el-button>
-        </template>
+</template>
       </el-table-column>
     </el-table>
     <!-- 分页 -->

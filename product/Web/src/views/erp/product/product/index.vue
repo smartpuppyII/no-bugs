@@ -58,6 +58,32 @@
             >
               <Icon icon="ep:download" class="mr-5px" /> {{ t('common.export') }}
             </el-button>
+            <el-button
+              type="primary"
+              plain
+              @click="openImportForm"
+              v-hasPermi="['erp:product:create']"
+            >
+              <Icon icon="ep:upload" class="mr-5px" /> {{ t('batchImport') }}
+            </el-button>
+            <el-button
+              type="warning"
+              plain
+              :disabled="selectionList.length === 0"
+              @click="openBatchUpdateForm"
+              v-hasPermi="['erp:product:update']"
+            >
+              <Icon icon="ep:edit" class="mr-5px" /> {{ t('batchUpdate') }}
+            </el-button>
+            <el-button
+              type="danger"
+              plain
+              :disabled="selectionList.length === 0"
+              @click="handleBatchDelete"
+              v-hasPermi="['erp:product:delete']"
+            >
+              <Icon icon="ep:delete" class="mr-5px" /> {{ t('batchDelete') }}
+            </el-button>
           </el-form-item>
         </el-col>
       </el-row>
@@ -66,7 +92,8 @@
 
   <!-- 列表 -->
   <ContentWrap>
-    <el-table v-loading="loading" :data="list" :stripe="true" :show-overflow-tooltip="true" :table-layout="'auto'">
+    <el-table v-loading="loading" :data="list" :stripe="true" :show-overflow-tooltip="true" :table-layout="'auto'" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="55" />
       <el-table-column :label="t('barCode')" align="center" prop="barCode" />
       <el-table-column :label="t('name')" align="center" prop="name" />
       <el-table-column :label="t('standard')" align="center" prop="standard" />
@@ -131,6 +158,10 @@
 
   <!-- 表单弹窗：添加/修改 -->
   <ProductForm ref="formRef" @success="getList" />
+  <!-- 批量导入弹窗 -->
+  <ProductImportForm ref="importFormRef" @success="getList" />
+  <!-- 批量修改弹窗 -->
+  <ProductBatchUpdateForm ref="batchUpdateFormRef" @success="getList" />
 </template>
 
 <script setup lang="ts">
@@ -139,6 +170,8 @@ import download from '@/utils/download'
 import { ProductApi, ProductVO } from '@/api/erp/product/product'
 import { ProductCategoryApi, ProductCategoryVO } from '@/api/erp/product/category'
 import ProductForm from './ProductForm.vue'
+import ProductImportForm from './ProductImportForm.vue'
+import ProductBatchUpdateForm from './ProductBatchUpdateForm.vue'
 import { DICT_TYPE } from '@/utils/dict'
 import { defaultProps, handleTree } from '@/utils/tree'
 import { erpPriceTableColumnFormatter } from '@/utils'
@@ -161,6 +194,7 @@ const queryParams = reactive({
 const queryFormRef = ref() // 搜索的表单
 const exportLoading = ref(false) // 导出的加载中
 const categoryList = ref<ProductCategoryVO[]>([]) // 产品分类列表
+const selectionList = ref<ProductVO[]>([]) // 选中的行数据
 
 /** 查询列表 */
 const getList = async () => {
@@ -205,6 +239,11 @@ const handleDelete = async (id: number) => {
   } catch {}
 }
 
+/** 多选操作 */
+const handleSelectionChange = (rows: ProductVO[]) => {
+  selectionList.value = rows
+}
+
 /** 导出按钮操作 */
 const handleExport = async () => {
   try {
@@ -218,6 +257,30 @@ const handleExport = async () => {
   } finally {
     exportLoading.value = false
   }
+}
+
+/** 批量导入操作 */
+const importFormRef = ref()
+const openImportForm = () => {
+  importFormRef.value.open()
+}
+
+/** 批量修改操作 */
+const batchUpdateFormRef = ref()
+const openBatchUpdateForm = () => {
+  const ids = selectionList.value.map((row: ProductVO) => row.id)
+  batchUpdateFormRef.value.open(ids)
+}
+
+/** 批量删除操作 */
+const handleBatchDelete = async () => {
+  try {
+    const ids = selectionList.value.map((row: ProductVO) => row.id)
+    await message.confirm(t('batchDeleteConfirm', { count: ids.length }))
+    await ProductApi.batchDeleteProduct(ids)
+    message.success(t('common.batchActionSuccess'))
+    await getList()
+  } catch {}
 }
 
 /** 初始化 **/

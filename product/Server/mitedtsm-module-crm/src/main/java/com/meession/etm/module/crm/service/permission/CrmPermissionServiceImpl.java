@@ -210,9 +210,15 @@ public class CrmPermissionServiceImpl implements CrmPermissionService {
         CrmPermissionDO oldPermission = permissionMapper.selectByBizTypeAndBizIdByUserId(
                 transferReqBO.getBizType(), transferReqBO.getBizId(), transferReqBO.getUserId());
         String bizTypeName = CrmBizTypeEnum.getNameByType(transferReqBO.getBizType());
-        if ((oldPermission == null || !isOwner(oldPermission.getLevel()))
-                && !CrmPermissionUtils.isCrmAdmin()) { // 并且不是超管
-            throw exception(CRM_PERMISSION_DENIED, bizTypeName);
+        // 1.0 如果当前用户不是负责人，检查是否是其下级的负责人（上级可以转移下级的数据）
+        if ((oldPermission == null || !isOwner(oldPermission.getLevel()))) {
+            if (!CrmPermissionUtils.isCrmAdmin()) {
+                // 尝试从下级中找到负责人权限
+                oldPermission = getSubordinateOwnerPermission(transferReqBO);
+                if (oldPermission == null) {
+                    throw exception(CRM_PERMISSION_DENIED, bizTypeName);
+                }
+            }
         }
         // 1.1 校验转移对象是否已经是该负责人
         if (oldPermission != null && ObjUtil.equal(transferReqBO.getNewOwnerUserId(), oldPermission.getUserId())) {
@@ -330,6 +336,27 @@ public class CrmPermissionServiceImpl implements CrmPermissionService {
     public CrmPermissionDO hasAnyPermission(Integer bizType, Long bizId, Long userId) {
         List<CrmPermissionDO> permissionList = permissionMapper.selectByBizTypeAndBizId(bizType, bizId);
         return findFirst(permissionList, permission -> ObjUtil.equal(permission.getUserId(), userId));
+    }
+
+    /**
+     * 从当前用户的下级中，查找拥有指定业务数据负责人权限的记录
+     *
+     * @param transferReqBO 转移请求参数
+     * @return 下级负责人权限记录，如果不存在则返回 null
+     */
+    private CrmPermissionDO getSubordinateOwnerPermission(CrmPermissionTransferReqBO transferReqBO) {
+        List<AdminUserRespDTO> subordinates = adminUserApi.getUserListBySubordinate(transferReqBO.getUserId());
+        if (CollUtil.isEmpty(subordinates)) {
+            return null;
+        }
+        for (AdminUserRespDTO sub : subordinates) {
+            CrmPermissionDO permission = permissionMapper.selectByBizTypeAndBizIdByUserId(
+                    transferReqBO.getBizType(), transferReqBO.getBizId(), sub.getId());
+            if (permission != null && isOwner(permission.getLevel())) {
+                return permission;
+            }
+        }
+        return null;
     }
 
 }

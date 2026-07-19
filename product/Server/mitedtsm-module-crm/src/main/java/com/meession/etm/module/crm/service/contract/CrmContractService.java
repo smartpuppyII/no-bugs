@@ -81,6 +81,13 @@ public interface CrmContractService {
     void updateContractAuditStatus(Long id, Integer bpmResult);
 
     /**
+     * 重置合同审批状态为草稿（用于流程实例不存在时重新提交）
+     *
+     * @param id 合同编号
+     */
+    void resetContractAuditStatus(Long id);
+
+    /**
      * 获得合同
      *
      * @param id 编号

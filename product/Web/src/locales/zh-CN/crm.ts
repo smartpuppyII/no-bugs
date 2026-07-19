@@ -55,6 +55,11 @@ export default {
     updateExisting: '是否更新已经存在的客户数据（"客户名称"重复）',
     allowFormat: '仅允许导入 xls、xlsx 格式文件。',
     downloadTemplate: '下载模板',
+    importNextStep: '下一步',
+    importPrevStep: '上一步',
+    importPreviewSummary: '即将从文件 {fileName} 中导入数据，请确认以下信息',
+    importPreviewTip: '导入成功后无法自动撤回，请仔细核对',
+    fileSize: '文件大小',
     uploadSuccessCount: '上传成功数量',
     updateSuccessCount: '更新成功数量',
     updateFailCount: '更新失败数量',
@@ -513,6 +518,7 @@ export default {
     contractId: '合同',
     contractNo: '合同编号',
     contractName: '合同名称',
+    ownerUserId: '负责人',
     price: '回款金额',
     returnType: '回款方式',
     returnTypeCash: '现金',
@@ -651,7 +657,13 @@ export default {
     batchTransform: '批量转为客户',
     batchDelete: '批量删除',
     batchDeleteConfirm: '确认删除选中的 {count} 条线索？',
-    batchTransformConfirm: '确认将选中的 {count} 条线索转为客户？'
+    batchTransformConfirm: '确认将选中的 {count} 条线索转为客户？',
+    // 空状态引导
+    emptyMyClue: '暂无线索，可以去公共线索池认领',
+    goToCluePool: '去公共线索池看看',
+    // 导入
+    importOwnerHint: '留空则直接进入公共线索池',
+    notSelectedPool: '未选择（线索将进入公共池）'
   },
   task: {
     title: '任务管理',

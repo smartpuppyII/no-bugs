@@ -109,3 +109,23 @@ export const exportSpu = async (params: any) => {
 export const getSpuSimpleList = async () => {
   return request.get({ url: '/product/spu/list-all-simple' })
 }
+
+// 批量删除商品 SPU
+export const batchDeleteSpu = async (ids: number[]) => {
+  return await request.delete({ url: '/product/spu/batch-delete', params: { ids: ids.join(',') } })
+}
+
+// 批量修改商品 SPU
+export const batchUpdateSpu = async (data: { ids: number[]; fields: any }) => {
+  return await request.put({ url: '/product/spu/batch-update', data })
+}
+
+// 获取 SPU 导入模板
+export const getImportTemplate = async () => {
+  return await request.download({ url: '/product/spu/get-import-template' })
+}
+
+// 导入商品 SPU Excel
+export const importSpu = async (formData: FormData) => {
+  return await request.upload({ url: '/product/spu/import', data: formData })
+}

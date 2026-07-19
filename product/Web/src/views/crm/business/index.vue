@@ -150,7 +150,7 @@
         prop="statusName"
         min-width="120"
       />
-      <el-table-column align="center" fixed="right" :label="t('common.action')" min-width="150">
+      <el-table-column align="center" fixed="right" :label="t('common.action')" width="200">
         <template #default="scope">
           <el-button
             v-hasPermi="['crm:business:update']"

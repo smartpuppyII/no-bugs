@@ -444,6 +444,7 @@ export default {
     contractId: 'Contract',
     contractNo: 'Contract No',
     contractName: 'Contract Name',
+    ownerUserId: 'Owner',
     price: 'Receivable Price',
     returnType: 'Return Type',
     returnTypeCash: 'Cash',

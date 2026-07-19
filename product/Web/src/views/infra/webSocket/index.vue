@@ -80,11 +80,13 @@ defineOptions({ name: 'InfraWebSocket' })
 const { t } = useI18n('infra')
 const message = useMessage() // 消息弹窗
 
+const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 const server = ref(
-  (import.meta.env.VITE_BASE_URL + '/infra/ws').replace('http', 'ws') +
-    '?token=' +
-    getRefreshToken() // 使用 getRefreshToken() 方法，而不使用 getAccessToken() 方法的原因：WebSocket 无法方便的刷新访问令牌
-) // WebSocket 服务地址
+  (import.meta.env.VITE_BASE_URL
+    ? (import.meta.env.VITE_BASE_URL + '/infra/ws').replace('http', 'ws')
+    : wsProtocol + '//' + window.location.host + '/admin-api/infra/ws'
+  ) + '?token=' + getRefreshToken()
+) // WebSocket 服务地址（自适应：有 BASE_URL 用 BASE_URL，否则用当前域名）
 const getIsOpen = computed(() => status.value === 'OPEN') // WebSocket 连接是否打开
 const getTagColor = computed(() => (getIsOpen.value ? 'success' : 'red')) // WebSocket 连接的展示颜色
 

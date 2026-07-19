@@ -104,7 +104,7 @@
         :formatter="dateFormatter"
         min-width="180"
       />
-      <el-table-column :label="t('common.action')" align="center" fixed="right" min-width="160">
+      <el-table-column :label="t('common.action')" align="center" fixed="right" width="200">
         <template #default="scope">
           <el-button
             link

@@ -53,5 +53,25 @@ export const ProductApi = {
   // 导出产品 Excel
   exportProduct: async (params) => {
     return await request.download({ url: `/erp/product/export-excel`, params })
+  },
+
+  // 批量删除产品
+  batchDeleteProduct: async (ids: number[]) => {
+    return await request.delete({ url: '/erp/product/batch-delete', params: { ids: ids.join(',') } })
+  },
+
+  // 批量修改产品
+  batchUpdateProduct: async (data: { ids: number[]; fields: Partial<ProductVO> }) => {
+    return await request.put({ url: '/erp/product/batch-update', data })
+  },
+
+  // 获取导入模板
+  getImportTemplate: async () => {
+    return await request.download({ url: '/erp/product/get-import-template' })
+  },
+
+  // 导入产品 Excel
+  importProduct: async (formData: FormData) => {
+    return await request.upload({ url: '/erp/product/import', data: formData })
   }
 }

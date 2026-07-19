@@ -14,6 +14,9 @@ import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueRespVO;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueSaveReqVO;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueTransferReqVO;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueDistributeReqVO;
+import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueImportExcelVO;
+import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueImportReqVO;
+import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueImportRespVO;
 import com.meession.etm.module.crm.dal.dataobject.clue.CrmClueDO;
 import com.meession.etm.module.crm.dal.dataobject.customer.CrmCustomerDO;
 import com.meession.etm.module.crm.service.clue.CrmClueService;
@@ -34,6 +37,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -122,6 +126,31 @@ public class CrmClueController {
         List<CrmClueDO> list = clueService.getCluePage(pageReqVO, getLoginUserId()).getList();
         // 导出 Excel
         ExcelUtils.write(response, "线索.xls", "数据", CrmClueRespVO.class, buildClueDetailList(list));
+    }
+
+    @GetMapping("/get-import-template")
+    @Operation(summary = "获得导入线索模板")
+    public void importTemplate(HttpServletResponse response) throws IOException {
+        // 手动创建导出 demo
+        List<CrmClueImportExcelVO> list = Arrays.asList(
+                CrmClueImportExcelVO.builder().name("示例线索A").industryId(1).level(1).source(1)
+                        .mobile("15601691300").telephone("").qq("").wechat("").email("demo@xxx")
+                        .areaId(null).detailAddress("").remark("").build(),
+                CrmClueImportExcelVO.builder().name("示例线索B").industryId(1).level(1).source(1)
+                        .mobile("15601691301").telephone("").qq("").wechat("").email("demo@xxx")
+                        .areaId(null).detailAddress("").remark("").build()
+        );
+        // 输出
+        ExcelUtils.write(response, "线索导入模板.xls", "线索列表", CrmClueImportExcelVO.class, list);
+    }
+
+    @PostMapping("/import")
+    @Operation(summary = "导入线索")
+    @PreAuthorize("@ss.hasPermission('crm:clue:create')")
+    public CommonResult<CrmClueImportRespVO> importExcel(@Valid CrmClueImportReqVO importReqVO)
+            throws Exception {
+        List<CrmClueImportExcelVO> list = ExcelUtils.read(importReqVO.getFile(), CrmClueImportExcelVO.class);
+        return success(clueService.importClueList(list, importReqVO));
     }
 
     private List<CrmClueRespVO> buildClueDetailList(List<CrmClueDO> list) {

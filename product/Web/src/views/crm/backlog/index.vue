@@ -1,6 +1,31 @@
 <template>
   <doc-alert title="【通用】跟进记录、待办事项" url="https://doc.iocoder.cn/crm/follow-up/" />
 
+  <!-- 顶部操作栏：快捷跳转 -->
+  <ContentWrap class="mb-10px">
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="text-sm font-bold mr-2">快捷入口：</span>
+      <el-button size="small" @click="getCount">
+        <Icon icon="ep:refresh" class="mr-1" /> 刷新数据
+      </el-button>
+      <el-button size="small" type="primary" @click="push({name:'CrmClue'})">
+        线索管理
+      </el-button>
+      <el-button size="small" type="primary" @click="push({name:'CrmCustomer'})">
+        客户管理
+      </el-button>
+      <el-button size="small" type="primary" @click="push({name:'CrmContract'})">
+        合同管理
+      </el-button>
+      <el-button size="small" type="primary" @click="push({name:'CrmReceivable'})">
+        回款管理
+      </el-button>
+      <el-button size="small" type="success" @click="push({path:'/crm/clue-pool'})">
+        公共线索池
+      </el-button>
+    </div>
+  </ContentWrap>
+
   <el-row :gutter="20">
     <el-col :span="4" class="min-w-[200px]">
       <div class="side-item-list">
@@ -43,10 +68,12 @@ import * as ClueApi from '@/api/crm/clue'
 import * as ContractApi from '@/api/crm/contract'
 import * as ReceivableApi from '@/api/crm/receivable'
 import * as ReceivablePlanApi from '@/api/crm/receivable/plan'
+import { useBadgeRefreshListener, emitBadgeRefresh } from '@/hooks/web/useCrmBadgeEvent'
 
 defineOptions({ name: 'CrmBacklog' })
 
 const { t } = useI18n('crm') // 国际化
+const { push } = useRouter()
 
 const leftMenu = ref('customerTodayContact')
 
@@ -123,6 +150,36 @@ const getCount = () => {
     (count) => (receivablePlanRemindCount.value = count)
   )
 }
+
+/** 刷新所有计数并通知菜单红点更新 */
+const refreshAllCounts = async () => {
+  await Promise.all([
+    CustomerApi.getTodayContactCustomerCount().then(
+      (count) => (customerTodayContactCount.value = count)
+    ),
+    CustomerApi.getPutPoolRemindCustomerCount().then(
+      (count) => (customerPutPoolRemindCount.value = count)
+    ),
+    CustomerApi.getFollowCustomerCount().then((count) => (customerFollowCount.value = count)),
+    ClueApi.getFollowClueCount().then((count) => (clueFollowCount.value = count)),
+    ContractApi.getAuditContractCount().then((count) => (contractAuditCount.value = count)),
+    ContractApi.getRemindContractCount().then((count) => (contractRemindCount.value = count)),
+    ReceivableApi.getAuditReceivableCount().then((count) => (receivableAuditCount.value = count)),
+    ReceivablePlanApi.getReceivablePlanRemindCount().then(
+      (count) => (receivablePlanRemindCount.value = count)
+    )
+  ])
+  // 通知菜单红点同步刷新
+  emitBadgeRefresh()
+}
+
+// 提供给子组件调用的刷新函数
+provide('refreshBacklogCount', refreshAllCounts)
+
+// 监听外部触发的 badge 刷新事件（如从其他页面操作后返回）
+useBadgeRefreshListener(() => {
+  getCount()
+})
 
 /** 激活时 */
 onActivated(async () => {

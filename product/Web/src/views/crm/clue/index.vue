@@ -112,8 +112,17 @@
       <el-tab-pane :label="t('customer.myInvolved')" name="2" />
       <el-tab-pane :label="t('customer.subordinateResponsible')" name="3" />
     </el-tabs>
-    <el-table v-loading="loading" :data="list" :stripe="true" :show-overflow-tooltip="true" :table-layout="'auto'" @selection-change="handleSelectionChange">
-      <el-table-column type="selection" width="55" />
+    <!-- 空状态：我负责的线索为空时，引导去公共线索池 -->
+    <div v-if="!loading && list.length === 0 && activeName === '1'" class="empty-guide">
+      <el-empty :description="t('clue.emptyMyClue')">
+        <el-button type="primary" @click="push({ name: 'CrmCluePool' })">
+          {{ t('clue.goToCluePool') }}
+        </el-button>
+      </el-empty>
+    </div>
+    <template v-else>
+      <el-table v-loading="loading" :data="list" :stripe="true" :show-overflow-tooltip="true" :table-layout="'auto'" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" />
       <el-table-column :label="t('clue.name')" align="center" prop="name" fixed="left" min-width="160">
         <template #default="scope">
           <el-link :underline="false" type="primary" @click="openDetail(scope.row.id)">
@@ -173,11 +182,12 @@
         min-width="180"
       />
       <el-table-column align="center" :label="t('clue.creatorName')" prop="creatorName" min-width="100" />
-      <el-table-column :label="t('common.action')" align="center" min-width="240" fixed="right">
+      <el-table-column :label="t('common.action')" align="center" width="280" fixed="right">
         <template #default="scope">
           <el-button
             link
             type="primary"
+            size="small"
             @click="openForm('update', scope.row.id)"
             v-hasPermi="['crm:clue:update']"
           >
@@ -186,6 +196,7 @@
           <el-button
             link
             type="warning"
+            size="small"
             @click="handlePutPool(scope.row)"
             v-hasPermi="['crm:clue:update']"
           >
@@ -194,6 +205,7 @@
           <el-button
             link
             type="danger"
+            size="small"
             @click="handleDelete(scope.row.id)"
             v-hasPermi="['crm:clue:delete']"
           >
@@ -209,6 +221,7 @@
       v-model:limit="queryParams.pageSize"
       @pagination="getList"
     />
+    </template>
   </ContentWrap>
 
   <!-- 表单弹窗：添加/修改 -->

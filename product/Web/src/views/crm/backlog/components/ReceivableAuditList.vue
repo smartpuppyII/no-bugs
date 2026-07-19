@@ -108,14 +108,11 @@
           <dict-tag :type="DICT_TYPE.CRM_AUDIT_STATUS" :value="scope.row.auditStatus" />
         </template>
       </el-table-column>
-      <el-table-column align="center" fixed="right" :label="t('common.action')" min-width="180">
+      <el-table-column align="center" fixed="right" :label="t('common.action')" width="220">
         <template #default="scope">
-          <el-button
-            v-hasPermi="['crm:receivable:update']"
-            link
-            type="primary"
-            @click="handleProcessDetail(scope.row)"
-          >
+          <el-button link type="primary" @click="openDetail(scope.row.id)">{{ t('common.view') }}</el-button>
+          <el-button v-hasPermi="['crm:receivable:update']" link type="warning"
+            @click="handleProcessDetail(scope.row)">
             {{ t('backlog.viewApproval') }}
           </el-button>
         </template>
@@ -137,10 +134,13 @@ import { dateFormatter, dateFormatter2 } from '@/utils/formatTime'
 import * as ReceivableApi from '@/api/crm/receivable'
 import { AUDIT_STATUS } from './common'
 import { erpPriceTableColumnFormatter } from '@/utils'
+import { emitBadgeRefresh } from '@/hooks/web/useCrmBadgeEvent'
 
 defineOptions({ name: 'CrmReceivableAuditList' })
 
 const { t } = useI18n('crm') // 国际化
+
+const refreshBacklogCount = inject<() => void>('refreshBacklogCount', () => {})
 const loading = ref(true) // 列表的加载中
 const total = ref(0) // 列表的总页数
 const list = ref([]) // 列表的数据
@@ -192,6 +192,7 @@ const openContractDetail = (id: number) => {
 /** 激活时 */
 onActivated(async () => {
   await getList()
+  refreshBacklogCount()
 })
 
 /** 初始化 **/

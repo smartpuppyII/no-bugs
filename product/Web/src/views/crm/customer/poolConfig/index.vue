@@ -23,7 +23,7 @@
               {{ t('common.save') }}
             </el-button>
           </div>
-        </template>
+</template>
         <!-- 表单 -->
         <el-form-item :label="t('poolConfig.enabled')" prop="enabled">
           <el-radio-group v-model="formData.enabled" @change="changeEnable" class="ml-4">

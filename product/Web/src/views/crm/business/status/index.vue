@@ -37,7 +37,7 @@
             {{ scope.row.deptNames.join(' ') }}
           </span>
           <span v-else>{{ t('crm.business.wholeCompany') }}</span>
-        </template>
+</template>
       </el-table-column>
       <el-table-column :label="t('crm.business.creatorName')" align="center" prop="creator"  fixed="right" />
       <el-table-column
@@ -65,7 +65,7 @@
           >
             {{ t('common.del') }}
           </el-button>
-        </template>
+</template>
       </el-table-column>
     </el-table>
     <!-- 分页 -->

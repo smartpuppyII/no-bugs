@@ -34,6 +34,11 @@ public class CrmNoRedisDAO {
      */
     public static final String ORDER_NO_PREFIX = "DD";
 
+    /**
+     * 报价单 {@link com.meession.etm.module.crm.dal.dataobject.quotation.CrmQuotationDO}
+     */
+    public static final String QUOTATION_NO_PREFIX = "BJ";
+
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 

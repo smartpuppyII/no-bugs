@@ -7,10 +7,7 @@ import com.meession.etm.framework.common.pojo.PageResult;
 import com.meession.etm.framework.common.util.collection.CollectionUtils;
 import com.meession.etm.framework.common.util.object.BeanUtils;
 import com.meession.etm.module.product.controller.admin.category.vo.ProductCategoryListReqVO;
-import com.meession.etm.module.product.controller.admin.spu.vo.ProductSkuSaveReqVO;
-import com.meession.etm.module.product.controller.admin.spu.vo.ProductSpuPageReqVO;
-import com.meession.etm.module.product.controller.admin.spu.vo.ProductSpuSaveReqVO;
-import com.meession.etm.module.product.controller.admin.spu.vo.ProductSpuUpdateStatusReqVO;
+import com.meession.etm.module.product.controller.admin.spu.vo.*;
 import com.meession.etm.module.product.controller.app.spu.vo.AppProductSpuPageReqVO;
 import com.meession.etm.module.product.dal.dataobject.category.ProductCategoryDO;
 import com.meession.etm.module.product.dal.dataobject.spu.ProductSpuDO;
@@ -21,6 +18,7 @@ import com.meession.etm.module.product.service.category.ProductCategoryService;
 import com.meession.etm.module.product.service.sku.ProductSkuService;
 import com.google.common.collect.Maps;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +38,7 @@ import static com.meession.etm.module.product.enums.ErrorCodeConstants.*;
  */
 @Service
 @Validated
+@Slf4j
 public class ProductSpuServiceImpl implements ProductSpuService {
 
     @Resource
@@ -279,6 +278,131 @@ public class ProductSpuServiceImpl implements ProductSpuService {
     @Override
     public Long getSpuCountByCategoryId(Long categoryId) {
         return productSpuMapper.selectCount(ProductSpuDO::getCategoryId, categoryId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void batchDeleteSpu(List<Long> ids) {
+        if (CollUtil.isEmpty(ids)) {
+            return;
+        }
+        for (Long id : ids) {
+            // 校验存在
+            ProductSpuDO spuDO = productSpuMapper.selectById(id);
+            if (spuDO == null) {
+                throw exception(SPU_NOT_EXISTS);
+            }
+            if (ObjectUtil.notEqual(spuDO.getStatus(), ProductSpuStatusEnum.RECYCLE.getStatus())) {
+                throw exception(SPU_NOT_RECYCLE);
+            }
+            // 删除 SPU
+            productSpuMapper.deleteById(id);
+            // 删除关联的 SKU
+            productSkuService.deleteSkuBySpuId(id);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void batchUpdateSpu(ProductSpuBatchUpdateReqVO reqVO) {
+        ProductSpuBatchUpdateReqVO.BatchUpdateFields fields = reqVO.getFields();
+        if (fields == null) {
+            return;
+        }
+        for (Long id : reqVO.getIds()) {
+            ProductSpuDO spu = productSpuMapper.selectById(id);
+            if (spu == null) {
+                throw exception(SPU_NOT_EXISTS);
+            }
+            if (fields.getCategoryId() != null) {
+                spu.setCategoryId(fields.getCategoryId());
+            }
+            if (fields.getSort() != null) {
+                spu.setSort(fields.getSort());
+            }
+            if (fields.getGiveIntegral() != null) {
+                spu.setGiveIntegral(fields.getGiveIntegral());
+            }
+            if (fields.getVirtualSalesCount() != null) {
+                spu.setVirtualSalesCount(fields.getVirtualSalesCount());
+            }
+            if (fields.getIntroduction() != null) {
+                spu.setIntroduction(fields.getIntroduction());
+            }
+            productSpuMapper.updateById(spu);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void importSpuList(List<ProductSpuImportExcelVO> list) {
+        if (CollUtil.isEmpty(list)) {
+            return;
+        }
+        for (ProductSpuImportExcelVO importVO : list) {
+            try {
+                importSingleSpu(importVO);
+            } catch (Exception e) {
+                // 单条导入失败不中断，记录日志继续
+                log.error("[importSpuList] 导入商品失败：{}", importVO.getName(), e);
+            }
+        }
+    }
+
+    /**
+     * 导入单条商品：创建 SPU + 默认单规格 SKU
+     */
+    private void importSingleSpu(ProductSpuImportExcelVO importVO) {
+        String spuName = importVO.getName() != null ? importVO.getName() : "未命名商品";
+
+        // 1. 构建 SPU
+        ProductSpuDO spu = new ProductSpuDO();
+        spu.setName(spuName);
+        spu.setKeyword(importVO.getKeyword() != null ? importVO.getKeyword() : spuName);
+        spu.setIntroduction(importVO.getIntroduction() != null ? importVO.getIntroduction() : "");
+        spu.setDescription(importVO.getDescription() != null ? importVO.getDescription() : "");
+        spu.setCategoryId(importVO.getCategoryId());
+        spu.setBrandId(importVO.getBrandId());
+        spu.setPicUrl(importVO.getPicUrl() != null ? importVO.getPicUrl() : "");
+        spu.setSort(importVO.getSort() != null ? importVO.getSort() : 0);
+        spu.setStatus(importVO.getStatus() != null ? importVO.getStatus() : ProductSpuStatusEnum.DISABLE.getStatus());
+        spu.setSpecType(false); // 单规格
+        spu.setSubCommissionType(false);
+        spu.setGiveIntegral(importVO.getGiveIntegral() != null ? importVO.getGiveIntegral() : 0);
+        spu.setVirtualSalesCount(importVO.getVirtualSalesCount() != null ? importVO.getVirtualSalesCount() : 0);
+        spu.setSalesCount(0);
+        spu.setBrowseCount(0);
+        // 物流默认 [1] = 快递配送
+        spu.setDeliveryTypes(java.util.Collections.singletonList(1));
+
+        // 价格：Excel 中是"元"，SKU 内部存"分"，导入时如果填的是元则乘100
+        int price = importVO.getPrice() != null ? importVO.getPrice() : 0;
+        int marketPrice = importVO.getMarketPrice() != null ? importVO.getMarketPrice() : 0;
+        int costPrice = importVO.getCostPrice() != null ? importVO.getCostPrice() : 0;
+
+        // 2. 构建默认单规格 SKU
+        ProductSkuSaveReqVO skuVO = new ProductSkuSaveReqVO();
+        skuVO.setName(spuName);
+        skuVO.setPrice(price);
+        skuVO.setMarketPrice(marketPrice);
+        skuVO.setCostPrice(costPrice);
+        skuVO.setStock(importVO.getStock() != null ? importVO.getStock() : 0);
+        skuVO.setBarCode(importVO.getBarCode() != null ? importVO.getBarCode() : "");
+        skuVO.setPicUrl(importVO.getPicUrl() != null ? importVO.getPicUrl() : "");
+        skuVO.setWeight(importVO.getWeight() != null ? importVO.getWeight() : 0d);
+        skuVO.setVolume(importVO.getVolume() != null ? importVO.getVolume() : 0d);
+
+        // 3. SPU 汇总价格/库存（从 SKU 合并）
+        spu.setPrice(price);
+        spu.setMarketPrice(marketPrice);
+        spu.setCostPrice(costPrice);
+        spu.setStock(skuVO.getStock());
+
+        // 4. 插入 SPU
+        productSpuMapper.insert(spu);
+
+        // 5. 插入 SKU（关联 SPU id）
+        productSkuService.createSkuList(spu.getId(), java.util.Collections.singletonList(skuVO));
     }
 
 }

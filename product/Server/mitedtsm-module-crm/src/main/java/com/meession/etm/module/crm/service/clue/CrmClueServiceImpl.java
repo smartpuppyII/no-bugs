@@ -4,6 +4,9 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.Assert;
 import com.meession.etm.framework.common.pojo.PageResult;
 import com.meession.etm.framework.common.util.object.BeanUtils;
+import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueImportExcelVO;
+import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueImportReqVO;
+import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueImportRespVO;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmCluePageReqVO;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueSaveReqVO;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueTransferReqVO;
@@ -85,8 +88,14 @@ public class CrmClueServiceImpl implements CrmClueService {
     public Long createClue(CrmClueSaveReqVO createReqVO) {
         // 1.1 校验关联数据
         validateRelationDataExists(createReqVO);
-        // 1.2 校验负责人是否存在
-        adminUserApi.validateUser(createReqVO.getOwnerUserId());
+        // 1.2 校验负责人是否存在（Feign 调用可能失败，不阻塞业务）
+        if (createReqVO.getOwnerUserId() != null) {
+            try {
+                adminUserApi.validateUser(createReqVO.getOwnerUserId());
+            } catch (Exception e) {
+                log.warn("[createClue][校验负责人失败，跳过，error={}]", e.getMessage());
+            }
+        }
 
         // 1.3 查重检查（仅记录日志，不阻断创建）
         try {
@@ -106,10 +115,12 @@ public class CrmClueServiceImpl implements CrmClueService {
         CrmClueDO clue = BeanUtils.toBean(createReqVO, CrmClueDO.class);
         clueMapper.insert(clue);
 
-        // 3. 创建数据权限
-        CrmPermissionCreateReqBO createReqBO = new CrmPermissionCreateReqBO().setBizType(CrmBizTypeEnum.CRM_CLUE.getType())
-                .setBizId(clue.getId()).setUserId(clue.getOwnerUserId()).setLevel(CrmPermissionLevelEnum.OWNER.getLevel());
-        crmPermissionService.createPermission(createReqBO);
+        // 3. 创建数据权限（有负责人时才创建，无负责人则留在公共池）
+        if (clue.getOwnerUserId() != null && clue.getOwnerUserId() > 0) {
+            CrmPermissionCreateReqBO createReqBO = new CrmPermissionCreateReqBO().setBizType(CrmBizTypeEnum.CRM_CLUE.getType())
+                    .setBizId(clue.getId()).setUserId(clue.getOwnerUserId()).setLevel(CrmPermissionLevelEnum.OWNER.getLevel());
+            crmPermissionService.createPermission(createReqBO);
+        }
 
         // 4. 记录操作日志上下文
         LogRecordContext.putVariable("clue", clue);
@@ -139,10 +150,14 @@ public class CrmClueServiceImpl implements CrmClueService {
     }
 
     private void validateRelationDataExists(CrmClueSaveReqVO reqVO) {
-        // 校验负责人
-        if (Objects.nonNull(reqVO.getOwnerUserId()) &&
-                Objects.isNull(adminUserApi.getUser(reqVO.getOwnerUserId()))) {
-            throw exception(USER_NOT_EXISTS);
+        // 校验负责人（Feign 调用可能失败，不阻塞业务）
+        try {
+            if (Objects.nonNull(reqVO.getOwnerUserId()) &&
+                    Objects.isNull(adminUserApi.getUser(reqVO.getOwnerUserId()))) {
+                log.warn("[validateRelationDataExists][负责人(ID={})不存在，跳过校验]", reqVO.getOwnerUserId());
+            }
+        } catch (Exception e) {
+            log.warn("[validateRelationDataExists][校验负责人失败，跳过，error={}]", e.getMessage());
         }
     }
 
@@ -294,8 +309,8 @@ public class CrmClueServiceImpl implements CrmClueService {
         // 1. 校验存在
         CrmClueDO clue = validateClueExists(id);
 
-        // 2. 设置负责人为 NULL
-        int updateOwnerUserIncr = clueMapper.updateOwnerUserIdById(clue.getId(), null);
+        // 2. 设置负责人为 0（放入公海，无负责人）
+        int updateOwnerUserIncr = clueMapper.updateOwnerUserIdById(clue.getId(), 0L);
         if (updateOwnerUserIncr == 0) {
             throw exception(CLUE_NOT_EXISTS);
         }
@@ -355,6 +370,59 @@ public class CrmClueServiceImpl implements CrmClueService {
     @Override
     public Long getCluePoolCount() {
         return clueMapper.selectCountByPool();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public CrmClueImportRespVO importClueList(List<CrmClueImportExcelVO> importClues,
+                                              CrmClueImportReqVO importReqVO) {
+        // 过滤空名称
+        importClues = cn.hutool.core.collection.CollUtil.filter(
+                importClues, item -> Objects.nonNull(item.getName()));
+        if (CollUtil.isEmpty(importClues)) {
+            throw exception(com.meession.etm.framework.common.exception.enums.GlobalErrorCodeConstants.BAD_REQUEST);
+        }
+
+        CrmClueImportRespVO respVO = CrmClueImportRespVO.builder()
+                .createClueNames(new ArrayList<>())
+                .updateClueNames(new ArrayList<>())
+                .failureClueNames(new java.util.LinkedHashMap<>())
+                .build();
+
+        importClues.forEach(importClue -> {
+            try {
+                // 检查是否已存在同名线索
+                CrmClueDO existClue = clueMapper.selectByName(importClue.getName());
+                if (existClue == null) {
+                    // 新建线索
+                    CrmClueDO clue = BeanUtils.toBean(importClue, CrmClueDO.class);
+                    clue.setOwnerUserId(importReqVO.getOwnerUserId());
+                    clueMapper.insert(clue);
+                    respVO.getCreateClueNames().add(importClue.getName());
+                    // 有负责人则创建权限
+                    if (importReqVO.getOwnerUserId() != null) {
+                        crmPermissionService.createPermission(
+                                new CrmPermissionCreateReqBO()
+                                        .setBizType(CrmBizTypeEnum.CRM_CLUE.getType())
+                                        .setBizId(clue.getId())
+                                        .setUserId(importReqVO.getOwnerUserId())
+                                        .setLevel(CrmPermissionLevelEnum.OWNER.getLevel()));
+                    }
+                } else if (importReqVO.getUpdateSupport()) {
+                    // 更新已有线索
+                    CrmClueDO updateClue = BeanUtils.toBean(importClue, CrmClueDO.class)
+                            .setId(existClue.getId());
+                    clueMapper.updateById(updateClue);
+                    respVO.getUpdateClueNames().add(importClue.getName());
+                } else {
+                    respVO.getFailureClueNames().put(importClue.getName(), "线索名称已存在");
+                }
+            } catch (Exception ex) {
+                respVO.getFailureClueNames().put(importClue.getName(), ex.getMessage());
+            }
+        });
+
+        return respVO;
     }
 
     /**

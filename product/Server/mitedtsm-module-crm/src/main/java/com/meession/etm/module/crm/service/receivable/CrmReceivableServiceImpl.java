@@ -22,6 +22,7 @@ import com.meession.etm.module.crm.enums.common.CrmAuditStatusEnum;
 import com.meession.etm.module.crm.enums.common.CrmBizTypeEnum;
 import com.meession.etm.module.crm.enums.permission.CrmPermissionLevelEnum;
 import com.meession.etm.module.crm.framework.permission.core.annotations.CrmPermission;
+import com.meession.etm.module.crm.service.CrmBpmDefinitionHelper;
 import com.meession.etm.module.crm.service.contract.CrmContractService;
 import com.meession.etm.module.crm.service.permission.CrmPermissionService;
 import com.meession.etm.module.crm.service.permission.bo.CrmPermissionCreateReqBO;
@@ -77,6 +78,9 @@ public class CrmReceivableServiceImpl implements CrmReceivableService {
     private AdminUserApi adminUserApi;
     @Resource
     private BpmProcessInstanceApi bpmProcessInstanceApi;
+
+    @Resource
+    private CrmBpmDefinitionHelper bpmDefinitionHelper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -247,11 +251,15 @@ public class CrmReceivableServiceImpl implements CrmReceivableService {
             throw exception(RECEIVABLE_SUBMIT_FAIL_NOT_DRAFT);
         }
 
-        // 2. 创建回款审批流程实例
+        // 2. 确保BPM审批流程定义存在（首次提交时自动创建）
+        bpmDefinitionHelper.ensureProcessDefinition(BPM_PROCESS_DEFINITION_KEY,
+                "CRM回款审批", "/crm/receivable/detail/index.vue", userId);
+
+        // 3. 创建回款审批流程实例
         String processInstanceId = bpmProcessInstanceApi.createProcessInstance(userId, new BpmProcessInstanceCreateReqDTO()
                 .setProcessDefinitionKey(BPM_PROCESS_DEFINITION_KEY).setBusinessKey(String.valueOf(id)));
 
-        // 3. 更新回款工作流编号
+        // 4. 更新回款工作流编号
         receivableMapper.updateById(new CrmReceivableDO().setId(id).setProcessInstanceId(processInstanceId)
                 .setAuditStatus(CrmAuditStatusEnum.PROCESS.getStatus()));
 

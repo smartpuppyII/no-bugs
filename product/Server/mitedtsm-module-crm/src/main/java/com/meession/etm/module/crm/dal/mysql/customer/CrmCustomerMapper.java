@@ -186,7 +186,7 @@ public interface CrmCustomerMapper extends BaseMapperX<CrmCustomerDO> {
         CrmPermissionUtils.appendPermissionCondition(query, CrmBizTypeEnum.CRM_CUSTOMER.getType(),
                 CrmCustomerDO::getId, ownerUserId, CrmSceneTypeEnum.OWNER.getType());
         // 未跟进
-        query.eq(CrmClueDO::getFollowUpStatus, false);
+        query.eq(CrmCustomerDO::getFollowUpStatus, false);
         return selectCount(query);
     }
 

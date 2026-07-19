@@ -5,15 +5,14 @@ import com.meession.etm.framework.common.enums.CommonStatusEnum;
 import com.meession.etm.framework.common.pojo.PageResult;
 import com.meession.etm.framework.common.util.collection.MapUtils;
 import com.meession.etm.framework.common.util.object.BeanUtils;
-import com.meession.etm.module.erp.controller.admin.product.vo.product.ErpProductPageReqVO;
-import com.meession.etm.module.erp.controller.admin.product.vo.product.ErpProductRespVO;
-import com.meession.etm.module.erp.controller.admin.product.vo.product.ProductSaveReqVO;
+import com.meession.etm.module.erp.controller.admin.product.vo.product.*;
 import com.meession.etm.module.erp.dal.dataobject.product.ErpProductCategoryDO;
 import com.meession.etm.module.erp.dal.dataobject.product.ErpProductDO;
 import com.meession.etm.module.erp.dal.dataobject.product.ErpProductUnitDO;
 import com.meession.etm.module.erp.dal.mysql.product.ErpProductMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.*;
@@ -142,6 +141,78 @@ public class ErpProductServiceImpl implements ErpProductService {
     @Override
     public Long getProductCountByUnitId(Long unitId) {
         return productMapper.selectCountByUnitId(unitId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void batchDeleteProduct(List<Long> ids) {
+        if (CollUtil.isEmpty(ids)) {
+            return;
+        }
+        for (Long id : ids) {
+            validateProductExists(id);
+            productMapper.deleteById(id);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void batchUpdateProduct(ErpProductBatchUpdateReqVO reqVO) {
+        ErpProductBatchUpdateReqVO.ErpProductBatchUpdateFieldsVO fields = reqVO.getFields();
+        if (fields == null) {
+            return;
+        }
+        for (Long id : reqVO.getIds()) {
+            ErpProductDO product = productMapper.selectById(id);
+            if (product == null) {
+                throw exception(PRODUCT_NOT_EXISTS);
+            }
+            // 只更新有值的字段
+            if (fields.getCategoryId() != null) {
+                product.setCategoryId(fields.getCategoryId());
+            }
+            if (fields.getUnitId() != null) {
+                product.setUnitId(fields.getUnitId());
+            }
+            if (fields.getStatus() != null) {
+                product.setStatus(fields.getStatus());
+            }
+            if (fields.getPurchasePrice() != null) {
+                product.setPurchasePrice(fields.getPurchasePrice());
+            }
+            if (fields.getSalePrice() != null) {
+                product.setSalePrice(fields.getSalePrice());
+            }
+            if (fields.getMinPrice() != null) {
+                product.setMinPrice(fields.getMinPrice());
+            }
+            if (fields.getExpiryDay() != null) {
+                product.setExpiryDay(fields.getExpiryDay());
+            }
+            if (fields.getWeight() != null) {
+                product.setWeight(fields.getWeight());
+            }
+            if (fields.getRemark() != null) {
+                product.setRemark(fields.getRemark());
+            }
+            productMapper.updateById(product);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void importProductList(List<ErpProductImportExcelVO> list) {
+        if (CollUtil.isEmpty(list)) {
+            return;
+        }
+        for (ErpProductImportExcelVO importVO : list) {
+            ErpProductDO product = BeanUtils.toBean(importVO, ErpProductDO.class);
+            // 默认启用状态
+            if (product.getStatus() == null) {
+                product.setStatus(CommonStatusEnum.ENABLE.getStatus());
+            }
+            productMapper.insert(product);
+        }
     }
 
 }

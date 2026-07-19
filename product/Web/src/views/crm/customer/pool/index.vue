@@ -1,8 +1,15 @@
 <template>
-  <doc-alert title="【客户】客户管理、公海客户" url="https://doc.iocoder.cn/crm/customer/" />
-  <doc-alert title="【通用】数据权限" url="https://doc.iocoder.cn/crm/permission/" />
+    <doc-alert title="【客户】客户管理、公海客户" url="https://doc.iocoder.cn/crm/customer/" />
+    <doc-alert title="【通用】数据权限" url="https://doc.iocoder.cn/crm/permission/" />
 
-  <ContentWrap>
+    <ContentWrap>
+      <el-alert
+        title="客户公海"
+        type="info"
+        :closable="false"
+        description="公海池中的客户为未被认领或已被释放的客户资源。您可以在此领取客户到自己名下。「待办事项-待进入公海的客户」可查看即将到期进入公海的客户。"
+        class="mb-15px"
+      />
     <!-- 搜索工作栏 -->
     <el-form
       ref="queryFormRef"
@@ -92,11 +99,11 @@
           <el-form-item>
             <el-button @click="handleQuery">
               <Icon class="mr-5px" icon="ep:search" />
-              {{ t('common.search') }}
+              搜索
             </el-button>
             <el-button @click="resetQuery(undefined)">
               <Icon class="mr-5px" icon="ep:refresh" />
-              {{ t('common.reset') }}
+              重置
             </el-button>
             <el-button
               v-hasPermi="['crm:customer:export']"
@@ -106,7 +113,23 @@
               @click="handleExport"
             >
               <Icon class="mr-5px" icon="ep:download" />
-              {{ t('common.export') }}
+              导出
+            </el-button>
+            <el-button
+              v-hasPermi="['crm:customer:create']"
+              plain
+              type="primary"
+              @click="openForm('create')"
+            >
+              <Icon class="mr-5px" icon="ep:plus" /> 新增
+            </el-button>
+            <el-button
+              v-hasPermi="['crm:customer:import']"
+              plain
+              type="success"
+              @click="openImportForm"
+            >
+              <Icon class="mr-5px" icon="ep:upload" /> 导入
             </el-button>
             <el-button
               v-hasPermi="['crm:customer:receive']"
@@ -189,18 +212,29 @@
       <el-table-column
         :formatter="dateFormatter"
         align="center"
-        :label="t('common.updateTime')"
+        :label="$t('common.updateTime')"
         prop="updateTime"
         min-width="180"
       />
       <el-table-column
         :formatter="dateFormatter"
         align="center"
-        :label="t('common.createTime')"
+        :label="$t('common.createTime')"
         prop="createTime"
         min-width="180"
       />
-      <el-table-column align="center" :label="t('common.creator')" prop="creatorName" min-width="100" />
+      <el-table-column align="center" :label="$t('common.creator')" prop="creatorName" min-width="100" />
+      <el-table-column label="操作" align="center" fixed="right" width="200">
+        <template #default="scope">
+          <el-button link type="primary" @click="openDetail(scope.row.id)">查看</el-button>
+          <el-button link type="success" v-hasPermi="['crm:customer:receive']" @click="handleReceive(scope.row)">
+            {{ t('receive') }}
+          </el-button>
+          <el-button link type="danger" v-hasPermi="['crm:customer:delete']" @click="handleDelete(scope.row.id)">
+            删除
+          </el-button>
+        </template>
+      </el-table-column>
     </el-table>
     <!-- 分页 -->
     <Pagination
@@ -210,6 +244,10 @@
       @pagination="getList"
     />
   </ContentWrap>
+
+  <!-- 弹窗 -->
+  <CustomerForm ref="formRef" @success="getList" />
+  <CustomerImportForm ref="importFormRef" @success="getList" />
 </template>
 
 <script lang="ts" setup>
@@ -217,11 +255,14 @@ import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import { dateFormatter } from '@/utils/formatTime'
 import download from '@/utils/download'
 import * as CustomerApi from '@/api/crm/customer'
+import CustomerForm from '../CustomerForm.vue'
+import CustomerImportForm from '../CustomerImportForm.vue'
 
 defineOptions({ name: 'CrmCustomerPool' })
 
 const message = useMessage() // 消息弹窗
 const { t } = useI18n('crm.customer') // 国际化
+const { t: tg } = useI18n() // 全局国际化
 const loading = ref(true) // 列表的加载中
 const total = ref(0) // 列表的总页数
 const list = ref([]) // 列表的数据
@@ -309,13 +350,41 @@ watch(
   }
 )
 
+/** 新增操作 */
+const formRef = ref()
+const openForm = (type: string) => { formRef.value.open(type) }
+
+/** 导入操作 */
+const importFormRef = ref()
+const openImportForm = () => { importFormRef.value.open() }
+
+/** 单条领取 */
+const handleReceive = async (row: any) => {
+  try {
+    await message.confirm(t('receiveConfirm', { name: row.name }))
+    await CustomerApi.receiveCustomer([row.id])
+    message.success(t('receiveSuccess', { name: row.name }))
+    await getList()
+  } catch {}
+}
+
 /** 批量领取 */
 const handleBatchReceive = async () => {
   try {
     const ids = selectionList.value.map((row: any) => row.id)
     await message.confirm(t('batchReceiveConfirm', { count: ids.length }))
     await CustomerApi.receiveCustomer(ids)
-    message.success(t('common.batchActionSuccess'))
+    message.success(tg('common.batchActionSuccess'))
+    await getList()
+  } catch {}
+}
+
+/** 单条删除 */
+const handleDelete = async (id: number) => {
+  try {
+    await message.delConfirm()
+    await CustomerApi.deleteCustomer(id)
+    message.success(tg('common.delSuccess'))
     await getList()
   } catch {}
 }

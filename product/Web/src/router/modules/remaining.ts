@@ -502,159 +502,97 @@ const remainingRouter: AppRouteRecordRaw[] = [
     meta: { hidden: true },
     children: [
       {
-        path: 'clue/detail/:id',
-        name: 'CrmClueDetail',
-        meta: {
-          title: t('router.crmClueDetail'),
-          noCache: true,
-          hidden: true,
-          activeMenu: '/crm/clue'
-        },
+        path: 'clue/detail/:id', name: 'CrmClueDetail',
+        meta: { title: t('router.crmClueDetail'), noCache: true, hidden: true, activeMenu: '/crm/clue' },
         component: () => import('@/views/crm/clue/detail/index.vue')
       },
       {
-        path: 'customer/detail/:id',
-        name: 'CrmCustomerDetail',
-        meta: {
-          title: t('router.crmCustomerDetail'),
-          noCache: true,
-          hidden: true,
-          activeMenu: '/crm/customer'
-        },
+        path: 'customer/detail/:id', name: 'CrmCustomerDetail',
+        meta: { title: t('router.crmCustomerDetail'), noCache: true, hidden: true, activeMenu: '/crm/customer' },
         component: () => import('@/views/crm/customer/detail/index.vue')
       },
       {
-        path: 'business/detail/:id',
-        name: 'CrmBusinessDetail',
-        meta: {
-          title: t('router.crmBusinessDetail'),
-          noCache: true,
-          hidden: true,
-          activeMenu: '/crm/business'
-        },
+        path: 'business/detail/:id', name: 'CrmBusinessDetail',
+        meta: { title: t('router.crmBusinessDetail'), noCache: true, hidden: true, activeMenu: '/crm/business' },
         component: () => import('@/views/crm/business/detail/index.vue')
       },
       {
-        path: 'contract/detail/:id',
-        name: 'CrmContractDetail',
-        meta: {
-          title: t('router.crmContractDetail'),
-          noCache: true,
-          hidden: true,
-          activeMenu: '/crm/contract'
-        },
+        path: 'contract/detail/:id', name: 'CrmContractDetail',
+        meta: { title: t('router.crmContractDetail'), noCache: true, hidden: true, activeMenu: '/crm/contract' },
         component: () => import('@/views/crm/contract/detail/index.vue')
       },
       {
-        path: 'receivable-plan/detail/:id',
-        name: 'CrmReceivablePlanDetail',
-        meta: {
-          title: t('router.crmReceivablePlanDetail'),
-          noCache: true,
-          hidden: true,
-          activeMenu: '/crm/receivable-plan'
-        },
+        path: 'receivable-plan/detail/:id', name: 'CrmReceivablePlanDetail',
+        meta: { title: t('router.crmReceivablePlanDetail'), noCache: true, hidden: true, activeMenu: '/crm/receivable-plan' },
         component: () => import('@/views/crm/receivable/plan/detail/index.vue')
       },
       {
-        path: 'receivable/detail/:id',
-        name: 'CrmReceivableDetail',
-        meta: {
-          title: t('router.crmReceivableDetail'),
-          noCache: true,
-          hidden: true,
-          activeMenu: '/crm/receivable'
-        },
+        path: 'receivable/detail/:id', name: 'CrmReceivableDetail',
+        meta: { title: t('router.crmReceivableDetail'), noCache: true, hidden: true, activeMenu: '/crm/receivable' },
         component: () => import('@/views/crm/receivable/detail/index.vue')
       },
       {
-        path: 'contact/detail/:id',
-        name: 'CrmContactDetail',
-        meta: {
-          title: t('router.crmContactDetail'),
-          noCache: true,
-          hidden: true,
-          activeMenu: '/crm/contact'
-        },
+        path: 'contact/detail/:id', name: 'CrmContactDetail',
+        meta: { title: t('router.crmContactDetail'), noCache: true, hidden: true, activeMenu: '/crm/contact' },
         component: () => import('@/views/crm/contact/detail/index.vue')
       },
       {
-        path: 'product/detail/:id',
-        name: 'CrmProductDetail',
-        meta: {
-          title: t('router.crmProductDetail'),
-          noCache: true,
-          hidden: true,
-          activeMenu: '/crm/product'
-        },
+        path: 'product/detail/:id', name: 'CrmProductDetail',
+        meta: { title: t('router.crmProductDetail'), noCache: true, hidden: true, activeMenu: '/crm/product' },
         component: () => import('@/views/crm/product/detail/index.vue')
       },
       {
-        path: 'order',
-        component: () => import('@/views/crm/order/index.vue'),
-        name: 'CrmOrder',
-        meta: { title: '订单管理', icon: 'ep:document' }
+        path: 'order', component: () => import('@/views/crm/order/index.vue'),
+        name: 'CrmOrder', meta: { title: '订单管理', icon: 'ep:document' }
       },
       {
-        path: 'order/detail/:id',
-        component: () => import('@/views/crm/order/detail/index.vue'),
-        name: 'CrmOrderDetail',
-        meta: { title: '订单详情', hidden: true, activeMenu: '/crm/order' }
+        path: 'order/detail/:id', component: () => import('@/views/crm/order/detail/index.vue'),
+        name: 'CrmOrderDetail', meta: { title: '订单详情', hidden: true, activeMenu: '/crm/order' }
       },
       {
-        path: 'dashboard',
-        component: () => import('@/views/crm/dashboard/index.vue'),
-        name: 'CrmDashboard',
-        meta: { title: 'CRM工作台', icon: 'ep:home-filled' }
+        path: 'dashboard', component: () => import('@/views/crm/dashboard/index.vue'),
+        name: 'CrmDashboard', meta: { title: 'CRM工作台', icon: 'ep:home-filled' }
       },
       {
-        path: 'tag',
-        component: () => import('@/views/crm/tag/index.vue'),
-        name: 'CrmTagManagement',
-        meta: { title: '标签管理', icon: 'ep:price-tag' }
+        path: 'data-screen', component: () => import('@/views/crm/dataScreen/index.vue'),
+        name: 'CrmDataScreen', meta: { title: '数据可视化大屏', icon: 'ep:data-analysis' }
       },
       {
-        path: 'handover',
-        component: () => import('@/views/crm/handover/index.vue'),
-        name: 'CrmHandoverManagement',
-        meta: { title: '离职交接', icon: 'ep:switch' }
+        path: 'tag', component: () => import('@/views/crm/tag/index.vue'),
+        name: 'CrmTagManagement', meta: { title: '标签管理', icon: 'ep:price-tag' }
       },
       {
-        path: 'duplicate',
-        component: () => import('@/views/crm/customer/duplicate/index.vue'),
-        name: 'CrmDuplicateManagement',
-        meta: { title: '重复客户管理', icon: 'ep:copy-document' }
+        path: 'handover', component: () => import('@/views/crm/handover/index.vue'),
+        name: 'CrmHandoverManagement', meta: { title: '离职交接', icon: 'ep:switch' }
       },
       {
-        path: 'duplicate/config',
-        component: () => import('@/views/crm/customer/duplicate/config.vue'),
-        name: 'CrmDuplicateConfig',
-        meta: { title: '查重规则配置', icon: 'ep:setting' }
+        path: 'duplicate', component: () => import('@/views/crm/customer/duplicate/index.vue'),
+        name: 'CrmDuplicateManagement', meta: { title: '重复客户管理', icon: 'ep:copy-document' }
       },
       {
-        path: 'competitor',
-        component: () => import('@/views/crm/competitor/index.vue'),
-        name: 'CrmCompetitor',
-        meta: { title: '竞争对手管理', icon: 'ep:connection' }
+        path: 'duplicate/config', component: () => import('@/views/crm/customer/duplicate/config.vue'),
+        name: 'CrmDuplicateConfig', meta: { title: '查重规则配置', icon: 'ep:setting' }
       },
       {
-        path: 'visit',
-        component: () => import('@/views/crm/visit/plan/index.vue'),
-        name: 'CrmVisitPlan',
-        meta: { title: '拜访管理', icon: 'ep:map-location' }
+        path: 'competitor', component: () => import('@/views/crm/competitor/index.vue'),
+        name: 'CrmCompetitor', meta: { title: '竞争对手管理', icon: 'ep:connection' }
       },
       {
-        path: 'target',
-        component: () => import('@/views/crm/target/index.vue'),
-        name: 'CrmTarget',
-        meta: { title: '销售目标', icon: 'ep:aim' }
+        path: 'visit', component: () => import('@/views/crm/visit/plan/index.vue'),
+        name: 'CrmVisitPlan', meta: { title: '拜访管理', icon: 'ep:map-location' }
       },
       {
-        path: 'quotation',
-        component: () => import('@/views/crm/quotation/index.vue'),
-        name: 'CrmQuotation',
-        meta: { title: '报价单管理', icon: 'ep:document-copy' }
-      }
+        path: 'target', component: () => import('@/views/crm/target/index.vue'),
+        name: 'CrmTarget', meta: { title: '销售目标', icon: 'ep:aim' }
+      },
+      {
+        path: 'quotation', component: () => import('@/views/crm/quotation/index.vue'),
+        name: 'CrmQuotation', meta: { title: '报价单管理', icon: 'ep:document-copy' }
+      },
+      {
+        path: 'quotation/detail/:id', component: () => import('@/views/crm/quotation/detail/index.vue'),
+        name: 'CrmQuotationDetail', meta: { title: '报价单详情', hidden: true, activeMenu: '/crm/quotation' }
+      },
     ]
   },
   {

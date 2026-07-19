@@ -79,6 +79,35 @@
               <Icon class="mr-5px" icon="ep:download" />
               {{ t('common.export') }}
             </el-button>
+            <el-button
+              v-hasPermi="['product:spu:create']"
+              plain
+              type="primary"
+              @click="openImportForm"
+            >
+              <Icon class="mr-5px" icon="ep:upload" />
+              {{ t('spu.batchImport') }}
+            </el-button>
+            <el-button
+              v-hasPermi="['product:spu:update']"
+              :disabled="selectionList.length === 0"
+              plain
+              type="warning"
+              @click="openBatchUpdateForm"
+            >
+              <Icon class="mr-5px" icon="ep:edit" />
+              {{ t('spu.batchUpdate') }}
+            </el-button>
+            <el-button
+              v-hasPermi="['product:spu:delete']"
+              :disabled="selectionList.length === 0"
+              plain
+              type="danger"
+              @click="handleBatchDelete"
+            >
+              <Icon class="mr-5px" icon="ep:delete" />
+              {{ t('spu.batchDelete') }}
+            </el-button>
           </el-form-item>
         </el-col>
       </el-row>
@@ -95,7 +124,8 @@
         :name="item.type"
       />
     </el-tabs>
-    <el-table v-loading="loading" :data="list" :table-layout="'auto'">
+    <el-table v-loading="loading" :data="list" :table-layout="'auto'" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="55" />
       <el-table-column type="expand">
         <template #default="{ row }">
           <el-form class="spu-table-expand" label-position="left">
@@ -240,6 +270,11 @@
       @pagination="getList"
     />
   </ContentWrap>
+
+  <!-- 批量导入弹窗 -->
+  <SpuImportForm ref="importFormRef" @success="handleImportSuccess" />
+  <!-- 批量修改弹窗 -->
+  <SpuBatchUpdateForm ref="batchUpdateFormRef" @success="handleBatchUpdateSuccess" />
 </template>
 <script lang="ts" setup>
 import { TabsPaneContext } from 'element-plus'
@@ -251,6 +286,8 @@ import { fenToYuan } from '@/utils'
 import download from '@/utils/download'
 import * as ProductSpuApi from '@/api/mall/product/spu'
 import * as ProductCategoryApi from '@/api/mall/product/category'
+import SpuImportForm from './components/SpuImportForm.vue'
+import SpuBatchUpdateForm from './components/SpuBatchUpdateForm.vue'
 
 defineOptions({ name: 'ProductSpu' })
 
@@ -301,6 +338,7 @@ const queryParams = ref({
   createTime: undefined
 }) // 查询参数
 const queryFormRef = ref() // 搜索的表单Ref
+const selectionList = ref<ProductSpuApi.Spu[]>([]) // 选中的行数据
 
 /** 查询列表 */
 const getList = async () => {
@@ -415,6 +453,11 @@ const openDetail = (id: number) => {
   push({ name: 'ProductSpuDetail', params: { id } })
 }
 
+/** 多选操作 */
+const handleSelectionChange = (rows: ProductSpuApi.Spu[]) => {
+  selectionList.value = rows
+}
+
 /** 导出按钮操作 */
 const handleExport = async () => {
   try {
@@ -428,6 +471,41 @@ const handleExport = async () => {
   } finally {
     exportLoading.value = false
   }
+}
+
+/** 批量导入操作 */
+const importFormRef = ref()
+const openImportForm = () => {
+  importFormRef.value.open()
+}
+const handleImportSuccess = () => {
+  // 导入成功后从后端刷新列表
+  getTabsCount()
+  getList()
+}
+
+/** 批量修改操作 */
+const batchUpdateFormRef = ref()
+const openBatchUpdateForm = () => {
+  const ids = selectionList.value.map((row: ProductSpuApi.Spu) => row.id as number)
+  batchUpdateFormRef.value.open(ids)
+}
+const handleBatchUpdateSuccess = () => {
+  selectionList.value = []
+  getList()
+}
+
+/** 批量删除操作 */
+const handleBatchDelete = async () => {
+  try {
+    const ids = selectionList.value.map((row: ProductSpuApi.Spu) => row.id as number)
+    await message.confirm(t('spu.batchDeleteConfirm', { count: ids.length }))
+    await ProductSpuApi.batchDeleteSpu(ids)
+    message.success(t('common.batchActionSuccess'))
+    selectionList.value = []
+    getTabsCount()
+    getList()
+  } catch {}
 }
 
 /** 获取分类的节点的完整结构 */

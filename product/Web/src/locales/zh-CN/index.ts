@@ -67,5 +67,7 @@ export default {
   // 字典翻译
   dict,
   // 避免菜单名是 OAuth 2.0 时，一直 warn 报错
-  'OAuth 2.0': 'OAuth 2.0'
+  'OAuth 2.0': 'OAuth 2.0',
+  // 菜单名优化：新人更容易理解
+  '公共线索': '公共线索池',
 }

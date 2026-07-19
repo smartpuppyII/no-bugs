@@ -251,12 +251,17 @@ const resetForm = () => {
 
 /** 处理切换客户 */
 const handleCustomerChange = async (customerId: number) => {
-  // 重置合同编号
+  // 重置合同编号和回款计划
   formData.value.contractId = undefined
-  // 获得合同列表
+  formData.value.planId = undefined
   if (customerId) {
+    // 获得合同列表
     contractList.value = []
+    receivablePlanList.value = []
     contractList.value = await ContractApi.getContractSimpleList(customerId)
+  } else {
+    contractList.value = []
+    receivablePlanList.value = []
   }
 }
 
@@ -276,6 +281,8 @@ const handleContractChange = async (contractId: number) => {
     if (contract) {
       formData.value.price = contract.totalPrice - contract.totalReceivablePrice
     }
+  } else {
+    receivablePlanList.value = []
   }
 }
 

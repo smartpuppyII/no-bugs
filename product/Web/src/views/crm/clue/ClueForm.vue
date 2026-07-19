@@ -33,7 +33,7 @@
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item :label="t('clue.ownerUserId')" prop="ownerUserId">
+          <el-form-item v-if="!props.poolMode" :label="t('clue.ownerUserId')" prop="ownerUserId">
             <el-select
               v-model="formData.ownerUserId"
               :disabled="formType !== 'create'"
@@ -155,6 +155,10 @@ import { useUserStore } from '@/store/modules/user'
 const { t } = useI18n('crm') // 国际化
 const message = useMessage() // 消息弹窗
 
+const props = defineProps({
+  poolMode: { type: Boolean, default: false } // 公共池模式：不指定负责人
+})
+
 const dialogVisible = ref(false) // 弹窗的是否展示
 const dialogTitle = ref('') // 弹窗的标题
 const formLoading = ref(false) // 表单的加载中：1）修改时的数据加载；2）提交的按钮禁用
@@ -180,32 +184,35 @@ const formData = ref({
 })
 const formRules = reactive({
   name: [{ required: true, message: t('clue.nameRequired'), trigger: 'blur' }],
-  ownerUserId: [{ required: true, message: t('clue.ownerUserRequired'), trigger: 'blur' }]
+  ownerUserId: props.poolMode ? [] : [{ required: true, message: t('clue.ownerUserRequired'), trigger: 'blur' }]
 })
 const formRef = ref() // 表单 Ref
 
 /** 打开弹窗 */
 const open = async (type: string, id?: number) => {
-  dialogVisible.value = true
-  dialogTitle.value = t('action.' + type, { scope: 'common' })
-  formType.value = type
-  resetForm()
-  // 修改时，设置数据
-  if (id) {
-    formLoading.value = true
-    try {
-      formData.value = await ClueApi.getClue(id)
-    } finally {
-      formLoading.value = false
+  try {
+    dialogVisible.value = true
+    dialogTitle.value = t('action.' + type, { scope: 'common' })
+    formType.value = type
+    resetForm()
+    // 修改时，设置数据
+    if (id) {
+      formLoading.value = true
+      try {
+        formData.value = await ClueApi.getClue(id)
+      } finally {
+        formLoading.value = false
+      }
     }
-  }
-  // 获得地区列表
-  areaList.value = await AreaApi.getAreaTree()
-  // 获得用户列表
-  userOptions.value = await UserApi.getSimpleUserList()
-  // 默认新建时选中自己
-  if (formType.value === 'create') {
-    formData.value.ownerUserId = useUserStore().getUser.id
+    // 获得地区列表和用户列表（容错，不阻塞表单打开）
+    try { areaList.value = await AreaApi.getAreaTree() } catch (e) { /* ignore */ }
+    try { userOptions.value = await UserApi.getSimpleUserList() } catch (e) { /* ignore */ }
+    // 默认新建时选中自己（公共池模式不设置负责人）
+    if (formType.value === 'create') {
+      formData.value.ownerUserId = props.poolMode ? null : useUserStore().getUser.id
+    }
+  } catch (e) {
+    console.error(e)
   }
 }
 defineExpose({ open }) // 提供 open 方法，用于打开弹窗
@@ -215,8 +222,10 @@ const emit = defineEmits(['success']) // 定义 success 事件，用于操作成
 const submitForm = async () => {
   // 校验表单
   if (!formRef) return
-  const valid = await formRef.value.validate()
-  if (!valid) return
+  try {
+    const valid = await formRef.value.validate()
+    if (!valid) return
+  } catch { return }
   // 提交请求
   formLoading.value = true
   try {
@@ -229,8 +238,9 @@ const submitForm = async () => {
       message.success(t('common.updateSuccess'))
     }
     dialogVisible.value = false
-    // 发送操作成功的事件
     emit('success')
+  } catch {
+    // API 错误由 axios 拦截器提示，此处静默
   } finally {
     formLoading.value = false
   }
@@ -255,6 +265,7 @@ const resetForm = () => {
     source: undefined,
     remark: undefined
   }
-  formRef.value?.resetFields()
+  // 先清校验再重置字段值，避免 resetFields 覆盖新值
+  formRef.value?.clearValidate()
 }
 </script>

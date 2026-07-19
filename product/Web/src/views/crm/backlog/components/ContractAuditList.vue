@@ -148,7 +148,7 @@
           <dict-tag :type="DICT_TYPE.CRM_AUDIT_STATUS" :value="scope.row.auditStatus" />
         </template>
       </el-table-column>
-      <el-table-column fixed="right" :label="t('common.action')" min-width="150">
+      <el-table-column fixed="right" :label="t('common.action')" width="150">
         <template #default="scope">
           <el-button
             link
@@ -177,8 +177,11 @@ import * as ContractApi from '@/api/crm/contract'
 import { DICT_TYPE } from '@/utils/dict'
 import { AUDIT_STATUS } from './common'
 import { erpPriceInputFormatter, erpPriceTableColumnFormatter } from '@/utils'
+import { emitBadgeRefresh } from '@/hooks/web/useCrmBadgeEvent'
 
 const { t } = useI18n('crm') // 国际化
+
+const refreshBacklogCount = inject<() => void>('refreshBacklogCount', () => {})
 const loading = ref(true) // 列表的加载中
 const total = ref(0) // 列表的总页数
 const list = ref([]) // 列表的数据
@@ -236,6 +239,7 @@ const openBusinessDetail = (id: number) => {
 /** 激活时 */
 onActivated(async () => {
   await getList()
+  refreshBacklogCount()
 })
 
 /** 初始化 **/

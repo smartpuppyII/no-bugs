@@ -211,7 +211,7 @@
         min-width="180"
       />
       <el-table-column align="center" :label="t('crm.contact.creatorName')" prop="creatorName" min-width="120" />
-      <el-table-column align="center" fixed="right" :label="t('common.action')" min-width="200">
+      <el-table-column align="center" fixed="right" :label="t('common.action')" width="150">
         <template #default="scope">
           <el-button
             v-hasPermi="['crm:contact:update']"

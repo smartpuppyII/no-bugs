@@ -863,7 +863,35 @@ export default {
       categoryIdRequired: '产品分类不能为空',
       unitIdRequired: '单位不能为空',
       statusRequired: '状态不能为空',
-      exportFilename: '产品'
+      exportFilename: '产品',
+      // 批量操作
+      batchImport: '批量导入',
+      batchUpdate: '批量修改',
+      batchDelete: '批量删除',
+      batchDeleteConfirm: '确认删除选中的 {count} 条产品？',
+      batchUpdateTitle: '批量修改产品',
+      batchUpdateDesc: '已选择 {count} 条产品，仅填写需要修改的字段，留空则不修改',
+      batchNoChange: '不修改（留空）',
+      batchNoFieldSelected: '请至少选择一个要修改的字段',
+      batchUpdateFailed: '批量修改失败，请稍后重试',
+      // 导入相关
+      importTitle: '产品导入',
+      uploadFile: '将文件拖到此处，或<em>点击上传</em>',
+      allowFormat: '仅允许导入 xls、xlsx 格式文件。',
+      downloadTemplate: '下载模板',
+      downloadTemplateFailed: '下载模板失败',
+      importNextStep: '下一步 - 预览草稿',
+      importPrevStep: '上一步',
+      importDraftTitle: '即将从文件 {fileName} 中导入数据，请仔细审查以下草稿数据',
+      importDraftCount: '共 {total} 条数据，有效 {valid} 条，无效 {invalid} 条',
+      importDraftTip: '导入成功后无法自动撤回，请仔细核对数据',
+      importSuccess: '产品导入成功',
+      importFailed: '导入失败，请稍后重试',
+      pleaseUploadFile: '请先上传文件',
+      maxFileLimit: '最多只能上传一个文件！',
+      templateFileName: '产品导入模板.xls',
+      fileSize: '文件大小',
+      fileNameLabel: '文件名'
     }
   },
   finance: {

@@ -24,6 +24,7 @@ import com.meession.etm.module.crm.enums.common.CrmAuditStatusEnum;
 import com.meession.etm.module.crm.enums.common.CrmBizTypeEnum;
 import com.meession.etm.module.crm.enums.permission.CrmPermissionLevelEnum;
 import com.meession.etm.module.crm.framework.permission.core.annotations.CrmPermission;
+import com.meession.etm.module.crm.service.CrmBpmDefinitionHelper;
 import com.meession.etm.module.crm.service.business.CrmBusinessService;
 import com.meession.etm.module.crm.service.contact.CrmContactService;
 import com.meession.etm.module.crm.service.customer.CrmCustomerService;
@@ -102,6 +103,9 @@ public class CrmContractServiceImpl implements CrmContractService {
     private AdminUserApi adminUserApi;
     @Resource
     private BpmProcessInstanceApi bpmProcessInstanceApi;
+
+    @Resource
+    private CrmBpmDefinitionHelper bpmDefinitionHelper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -316,15 +320,19 @@ public class CrmContractServiceImpl implements CrmContractService {
             throw exception(CONTRACT_SUBMIT_FAIL_NOT_DRAFT);
         }
 
-        // 2. 创建合同审批流程实例
+        // 2. 确保BPM审批流程定义存在（首次提交时自动创建）
+        bpmDefinitionHelper.ensureProcessDefinition(BPM_PROCESS_DEFINITION_KEY,
+                "CRM合同审批", "/crm/contract/detail/index.vue", userId);
+
+        // 3. 创建合同审批流程实例
         String processInstanceId = bpmProcessInstanceApi.createProcessInstance(userId, new BpmProcessInstanceCreateReqDTO()
                 .setProcessDefinitionKey(BPM_PROCESS_DEFINITION_KEY).setBusinessKey(String.valueOf(id)));
 
-        // 3. 更新合同工作流编号
+        // 4. 更新合同工作流编号
         contractMapper.updateById(new CrmContractDO().setId(id).setProcessInstanceId(processInstanceId)
                 .setAuditStatus(CrmAuditStatusEnum.PROCESS.getStatus()));
 
-        // 3. 记录日志
+        // 5. 记录日志
         LogRecordContext.putVariable("contractName", contract.getName());
     }
 
@@ -342,6 +350,20 @@ public class CrmContractServiceImpl implements CrmContractService {
         // 2. 更新合同审批结果
         Integer auditStatus = convertBpmResultToAuditStatus(bpmResult);
         contractMapper.updateById(new CrmContractDO().setId(id).setAuditStatus(auditStatus));
+    }
+
+    @Override
+    public void resetContractAuditStatus(Long id) {
+        // 1. 校验合同是否存在
+        CrmContractDO contract = validateContractExists(id);
+        // 2. 只有审批中/已通过/已拒绝/已取消状态，才允许重置
+        if (ObjUtil.equals(contract.getAuditStatus(), CrmAuditStatusEnum.DRAFT.getStatus())) {
+            throw exception(CONTRACT_RESET_AUDIT_FAIL);
+        }
+        // 3. 重置为草稿状态，清除流程实例编号
+        contractMapper.updateById(new CrmContractDO().setId(id)
+                .setAuditStatus(CrmAuditStatusEnum.DRAFT.getStatus())
+                .setProcessInstanceId(null));
     }
 
     // ======================= 查询相关 =======================

@@ -19,7 +19,7 @@
               {{ t('crm.contract.save') }}
             </el-button>
           </div>
-        </template>
+</template>
         <!-- 表单 -->
         <el-form-item :label="t('crm.contract.notifyEnabled')" prop="notifyEnabled">
           <el-radio-group

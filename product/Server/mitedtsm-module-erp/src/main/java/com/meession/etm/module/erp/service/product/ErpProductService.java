@@ -1,9 +1,7 @@
 package com.meession.etm.module.erp.service.product;
 
 import com.meession.etm.framework.common.pojo.PageResult;
-import com.meession.etm.module.erp.controller.admin.product.vo.product.ErpProductPageReqVO;
-import com.meession.etm.module.erp.controller.admin.product.vo.product.ErpProductRespVO;
-import com.meession.etm.module.erp.controller.admin.product.vo.product.ProductSaveReqVO;
+import com.meession.etm.module.erp.controller.admin.product.vo.product.*;
 import com.meession.etm.module.erp.dal.dataobject.product.ErpProductDO;
 import jakarta.validation.Valid;
 
@@ -107,5 +105,26 @@ public interface ErpProductService {
      * @return 产品数量
      */
     Long getProductCountByUnitId(Long unitId);
+
+    /**
+     * 批量删除产品
+     *
+     * @param ids 产品编号列表
+     */
+    void batchDeleteProduct(List<Long> ids);
+
+    /**
+     * 批量修改产品
+     *
+     * @param reqVO 批量修改请求
+     */
+    void batchUpdateProduct(ErpProductBatchUpdateReqVO reqVO);
+
+    /**
+     * 导入产品列表
+     *
+     * @param list Excel 导入的产品列表
+     */
+    void importProductList(List<ErpProductImportExcelVO> list);
 
 }

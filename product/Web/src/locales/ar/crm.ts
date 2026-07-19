@@ -426,6 +426,7 @@ export default {
     contractId: 'العقد',
     contractNo: 'رقم العقد',
     contractName: 'اسم العقد',
+    ownerUserId: 'المالك',
     price: 'سعر المستحق',
     returnType: 'نوع الإرجاع',
     returnTypeCash: 'نقد',

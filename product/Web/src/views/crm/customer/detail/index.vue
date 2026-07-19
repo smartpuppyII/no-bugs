@@ -73,7 +73,7 @@
                 {{ t('customer.noMoreTags') }}
               </el-dropdown-item>
             </el-dropdown-menu>
-          </template>
+</template>
         </el-dropdown>
       </div>
     </el-col>

@@ -21,8 +21,10 @@ import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -135,6 +137,58 @@ public class ProductSpuController {
         // 导出 Excel
         ExcelUtils.write(response, "商品列表.xls", "数据", ProductSpuRespVO.class,
                 BeanUtils.toBean(list, ProductSpuRespVO.class));
+    }
+
+    // ==================== 批量操作 ====================
+
+    @DeleteMapping("/batch-delete")
+    @Operation(summary = "批量删除商品 SPU")
+    @Parameter(name = "ids", description = "编号数组", required = true, example = "1,2,3")
+    @PreAuthorize("@ss.hasPermission('product:spu:delete')")
+    public CommonResult<Boolean> batchDeleteSpu(@RequestParam("ids") List<Long> ids) {
+        productSpuService.batchDeleteSpu(ids);
+        return success(true);
+    }
+
+    @PutMapping("/batch-update")
+    @Operation(summary = "批量修改商品 SPU")
+    @PreAuthorize("@ss.hasPermission('product:spu:update')")
+    public CommonResult<Boolean> batchUpdateSpu(@Valid @RequestBody ProductSpuBatchUpdateReqVO reqVO) {
+        productSpuService.batchUpdateSpu(reqVO);
+        return success(true);
+    }
+
+    // ==================== 导入 ====================
+
+    @GetMapping("/get-import-template")
+    @Operation(summary = "获得导入商品模板")
+    public void importTemplate(HttpServletResponse response) throws IOException {
+        List<ProductSpuImportExcelVO> list = Arrays.asList(
+                ProductSpuImportExcelVO.builder().name("示例商品A").keyword("夏季新品")
+                        .introduction("舒适透气").description("详情描述")
+                        .categoryId(null).brandId(null).picUrl("")
+                        .sort(10).status(0)
+                        .price(9900).marketPrice(19900).costPrice(5000).stock(100)
+                        .barCode("BAR001").weight(1.0).volume(0.5)
+                        .giveIntegral(10).virtualSalesCount(50).build(),
+                ProductSpuImportExcelVO.builder().name("示例商品B").keyword("冬季保暖")
+                        .introduction("加厚设计").description("详情描述")
+                        .categoryId(null).brandId(null).picUrl("")
+                        .sort(20).status(0)
+                        .price(19900).marketPrice(29900).costPrice(10000).stock(200)
+                        .barCode("BAR002").weight(2.0).volume(1.0)
+                        .giveIntegral(20).virtualSalesCount(100).build()
+        );
+        ExcelUtils.write(response, "商品导入模板.xls", "商品列表", ProductSpuImportExcelVO.class, list);
+    }
+
+    @PostMapping("/import")
+    @Operation(summary = "导入商品 SPU")
+    @PreAuthorize("@ss.hasPermission('product:spu:create')")
+    public CommonResult<String> importSpu(@RequestParam("file") MultipartFile file) throws Exception {
+        List<ProductSpuImportExcelVO> list = ExcelUtils.read(file, ProductSpuImportExcelVO.class);
+        productSpuService.importSpuList(list);
+        return success("导入成功，共处理 " + list.size() + " 条数据");
     }
 
 }

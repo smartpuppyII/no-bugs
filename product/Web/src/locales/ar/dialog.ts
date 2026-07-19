@@ -1,5 +1,7 @@
 export default {
   dialog: 'حوار',
   open: 'فتح',
-  close: 'إغلاق'
+  close: 'إغلاق',
+  confirm: 'تأكيد',
+  cancel: 'إلغاء'
 }

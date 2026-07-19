@@ -2,6 +2,9 @@ package com.meession.etm.module.crm.service.clue;
 
 import com.meession.etm.framework.common.pojo.PageResult;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmCluePageReqVO;
+import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueImportExcelVO;
+import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueImportReqVO;
+import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueImportRespVO;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueSaveReqVO;
 import com.meession.etm.module.crm.controller.admin.clue.vo.CrmClueTransferReqVO;
 import com.meession.etm.module.crm.dal.dataobject.clue.CrmClueDO;
@@ -111,5 +114,14 @@ public interface CrmClueService {
      * @return 数量
      */
     Long getCluePoolCount();
+
+    /**
+     * 导入线索列表
+     *
+     * @param importClues  导入线索列表
+     * @param importReqVO  导入请求
+     * @return 导入结果
+     */
+    CrmClueImportRespVO importClueList(List<CrmClueImportExcelVO> importClues, CrmClueImportReqVO importReqVO);
 
 }

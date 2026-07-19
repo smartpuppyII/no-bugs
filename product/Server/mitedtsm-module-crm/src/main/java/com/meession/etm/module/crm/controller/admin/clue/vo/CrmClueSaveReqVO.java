@@ -45,8 +45,7 @@ public class CrmClueSaveReqVO {
     @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     private LocalDateTime contactNextTime;
 
-    @Schema(description = "负责人编号", example = "2048")
-    @NotNull(message = "负责人编号不能为空")
+    @Schema(description = "负责人编号（为空时直接进入公共线索池）", example = "2048")
     private Long ownerUserId;
 
     @Schema(description = "手机号", example = "18000000000")

@@ -2,9 +2,7 @@ package com.meession.etm.module.product.service.spu;
 
 import com.meession.etm.framework.common.pojo.PageResult;
 import com.meession.etm.framework.common.util.collection.CollectionUtils;
-import com.meession.etm.module.product.controller.admin.spu.vo.ProductSpuPageReqVO;
-import com.meession.etm.module.product.controller.admin.spu.vo.ProductSpuSaveReqVO;
-import com.meession.etm.module.product.controller.admin.spu.vo.ProductSpuUpdateStatusReqVO;
+import com.meession.etm.module.product.controller.admin.spu.vo.*;
 import com.meession.etm.module.product.controller.app.spu.vo.AppProductSpuPageReqVO;
 import com.meession.etm.module.product.dal.dataobject.spu.ProductSpuDO;
 import jakarta.validation.Valid;
@@ -151,5 +149,26 @@ public interface ProductSpuService {
      */
     @Async
     void updateBrowseCount(Long id, int incrCount);
+
+    /**
+     * 批量删除商品 SPU
+     *
+     * @param ids 商品 SPU 编号列表
+     */
+    void batchDeleteSpu(List<Long> ids);
+
+    /**
+     * 批量修改商品 SPU
+     *
+     * @param reqVO 批量修改请求
+     */
+    void batchUpdateSpu(ProductSpuBatchUpdateReqVO reqVO);
+
+    /**
+     * 导入商品 SPU 列表
+     *
+     * @param list Excel 导入的商品 SPU 列表
+     */
+    void importSpuList(List<ProductSpuImportExcelVO> list);
 
 }

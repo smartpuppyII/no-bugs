@@ -162,12 +162,13 @@
           <dict-tag :type="DICT_TYPE.CRM_AUDIT_STATUS" :value="scope.row.auditStatus" />
         </template>
       </el-table-column>
-      <el-table-column align="center" fixed="right" :label="t('common.action')" min-width="180">
+      <el-table-column align="center" fixed="right" :label="t('common.action')" width="280">
         <template #default="scope">
           <el-button
             v-hasPermi="['crm:receivable:update']"
             link
             type="primary"
+            size="small"
             @click="openForm('update', scope.row.id)"
           >
             {{ t('common.edit') }}
@@ -176,16 +177,18 @@
             v-if="scope.row.auditStatus === 0"
             v-hasPermi="['crm:receivable:update']"
             link
-            type="primary"
+            type="success"
+            size="small"
             @click="handleSubmit(scope.row)"
           >
             {{ t('contract.submitAudit') }}
           </el-button>
           <el-button
-            v-else
+            v-else-if="scope.row.processInstanceId"
             v-hasPermi="['crm:receivable:update']"
             link
             type="primary"
+            size="small"
             @click="handleProcessDetail(scope.row)"
           >
             {{ t('contract.viewApproval') }}
@@ -194,6 +197,7 @@
             v-hasPermi="['crm:receivable:delete']"
             link
             type="danger"
+            size="small"
             @click="handleDelete(scope.row.id)"
           >
             {{ t('common.delete') }}

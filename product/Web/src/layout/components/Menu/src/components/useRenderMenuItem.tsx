@@ -9,7 +9,11 @@ const { renderMenuTitle } = useRenderMenuTitle()
 export const useRenderMenuItem = () =>
   // allRouters: AppRouteRecordRaw[] = [],
   {
-    const renderMenuItem = (routers: AppRouteRecordRaw[], parentPath = '/') => {
+    const renderMenuItem = (
+      routers: AppRouteRecordRaw[],
+      parentPath = '/',
+      badgeMap?: Record<string, number>
+    ) => {
       return routers
         .filter((v) => !v.meta?.hidden)
         .map((v) => {
@@ -17,26 +21,29 @@ export const useRenderMenuItem = () =>
           const { oneShowingChild, onlyOneChild } = hasOneShowingChild(v.children, v)
           const fullPath = isUrl(v.path) ? v.path : pathResolve(parentPath, v.path) // getAllParentPath<AppRouteRecordRaw>(allRouters, v.path).join('/')
 
+          const getBadge = (path: string) =>
+            badgeMap ? badgeMap[path] ?? 0 : 0
+
           if (
             oneShowingChild &&
             (!onlyOneChild?.children || onlyOneChild?.noShowingChildren) &&
             !meta?.alwaysShow
           ) {
+            const itemPath = onlyOneChild ? pathResolve(fullPath, onlyOneChild.path) : fullPath
+            const itemMeta = onlyOneChild ? onlyOneChild?.meta : meta
             return (
-              <ElMenuItem
-                index={onlyOneChild ? pathResolve(fullPath, onlyOneChild.path) : fullPath}
-              >
+              <ElMenuItem index={itemPath}>
                 {{
-                  default: () => renderMenuTitle(onlyOneChild ? onlyOneChild?.meta : meta)
+                  default: () => renderMenuTitle(itemMeta, getBadge(itemPath))
                 }}
               </ElMenuItem>
             )
           } else {
             return (
-              <ElSubMenu index={fullPath}>
+              <ElSubMenu index={(v.name as string) || fullPath}>
                 {{
-                  title: () => renderMenuTitle(meta),
-                  default: () => renderMenuItem(v.children!, fullPath)
+                  title: () => renderMenuTitle(meta, getBadge(fullPath)),
+                  default: () => renderMenuItem(v.children!, fullPath, badgeMap)
                 }}
               </ElSubMenu>
             )

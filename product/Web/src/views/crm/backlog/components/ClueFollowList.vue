@@ -88,6 +88,12 @@
         min-width="180"
       />
       <el-table-column align="center" :label="t('clue.creatorName')" prop="creatorName" min-width="100" />
+      <el-table-column :label="t('common.action')" align="center" fixed="right" width="170">
+        <template #default="scope">
+          <el-button link type="primary" @click="openDetail(scope.row.id)">{{ t('common.view') }}</el-button>
+          <el-button link type="success" @click="handleFollowUp(scope.row)">{{ t('crm.followUp.createFollowUp') }}</el-button>
+        </template>
+      </el-table-column>
     </el-table>
     <!-- 分页 -->
     <Pagination
@@ -97,16 +103,22 @@
       @pagination="getList"
     />
   </ContentWrap>
+  <!-- 跟进表单弹窗 -->
+  <FollowUpRecordForm ref="followUpFormRef" @success="onFollowUpSuccess" />
 </template>
 <script setup lang="ts">
 import * as ClueApi from '@/api/crm/clue'
 import { DICT_TYPE } from '@/utils/dict'
 import { dateFormatter } from '@/utils/formatTime'
 import { FOLLOWUP_STATUS } from './common'
+import FollowUpRecordForm from '@/views/crm/followup/FollowUpRecordForm.vue'
+import { emitBadgeRefresh } from '@/hooks/web/useCrmBadgeEvent'
 
 defineOptions({ name: 'CrmClueFollowList' })
 
 const { t } = useI18n('crm') // 国际化
+
+const refreshBacklogCount = inject<() => void>('refreshBacklogCount', () => {})
 const loading = ref(true) // 列表的加载中
 const total = ref(0) // 列表的总页数
 const list = ref([]) // 列表的数据
@@ -139,6 +151,18 @@ const handleQuery = () => {
 const { push } = useRouter()
 const openDetail = (id: number) => {
   push({ name: 'CrmClueDetail', params: { id } })
+}
+
+/** 跟进操作 */
+const followUpFormRef = ref()
+const handleFollowUp = (row: any) => {
+  followUpFormRef.value.open(1, row.id) // bizType=1 线索
+}
+
+/** 跟进成功：刷新列表、侧边栏计数、菜单红点 */
+const onFollowUpSuccess = () => {
+  getList()
+  refreshBacklogCount()
 }
 
 /** 激活时 */

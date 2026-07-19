@@ -6,6 +6,7 @@ import { usePermissionStore } from '@/store/modules/permission'
 import { useRenderMenuItem } from './components/useRenderMenuItem'
 import { isUrl } from '@/utils/is'
 import { useDesign } from '@/hooks/web/useDesign'
+import { useMenuBadge } from '@/hooks/web/useMenuBadge'
 import { LayoutType } from '@/types/layout'
 
 const { getPrefixCls } = useDesign()
@@ -29,6 +30,8 @@ export default defineComponent({
     const { push, currentRoute } = useRouter()
 
     const permissionStore = usePermissionStore()
+
+    const { badgeMap } = useMenuBadge()
 
     const menuMode = computed((): 'vertical' | 'horizontal' => {
       // 竖
@@ -100,7 +103,7 @@ export default defineComponent({
           {{
             default: () => {
               const { renderMenuItem } = useRenderMenuItem(unref(menuMode))
-              return renderMenuItem(unref(routers))
+              return renderMenuItem(unref(routers), '/', unref(badgeMap))
             }
           }}
         </ElMenu>
@@ -147,6 +150,8 @@ $prefix-cls: #{$namespace}-menu;
     // 设置子菜单悬停的高亮和背景色
     .#{$elNamespace}-sub-menu__title,
     .#{$elNamespace}-menu-item {
+      position: relative;
+
       &:hover {
         color: var(--left-menu-text-active-color) !important;
         background-color: var(--left-menu-bg-color) !important;
@@ -161,10 +166,6 @@ $prefix-cls: #{$namespace}-menu;
       &:hover {
         background-color: var(--left-menu-bg-active-color) !important;
       }
-    }
-
-    .#{$elNamespace}-menu-item.is-active {
-      position: relative;
     }
 
     // 设置子菜单的背景颜色
@@ -253,6 +254,8 @@ $prefix-cls: #{$namespace}-menu-popper;
   // 设置子菜单悬停的高亮和背景色
   .el-sub-menu__title,
   .el-menu-item {
+    position: relative;
+
     &:hover {
       color: var(--left-menu-text-active-color) !important;
       background-color: var(--left-menu-bg-color) !important;
@@ -261,12 +264,28 @@ $prefix-cls: #{$namespace}-menu-popper;
 
   // 设置选中时的高亮背景
   .el-menu-item.is-active {
-    position: relative;
     background-color: var(--left-menu-bg-active-color) !important;
 
     &:hover {
       background-color: var(--left-menu-bg-active-color) !important;
     }
   }
+}
+
+// 菜单红点徽标样式
+.menu-badge {
+  margin-left: auto;
+  margin-right: 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background-color: #F56C6C;
+  color: #fff;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 </style>

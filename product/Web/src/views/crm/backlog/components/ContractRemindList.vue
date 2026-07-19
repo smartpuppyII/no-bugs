@@ -148,14 +148,11 @@
           <dict-tag :type="DICT_TYPE.CRM_AUDIT_STATUS" :value="scope.row.auditStatus" />
         </template>
       </el-table-column>
-      <el-table-column fixed="right" :label="t('common.action')" min-width="150">
+      <el-table-column fixed="right" :label="t('common.action')" width="200">
         <template #default="scope">
-          <el-button
-            link
-            v-hasPermi="['crm:contract:update']"
-            type="primary"
-            @click="handleProcessDetail(scope.row)"
-          >
+          <el-button link type="primary" @click="openDetail(scope.row.id)">{{ t('common.view') }}</el-button>
+          <el-button link type="success" @click="handleFollowUp(scope.row)">{{ t('crm.followUp.createFollowUp') }}</el-button>
+          <el-button link v-hasPermi="['crm:contract:update']" type="warning" @click="handleProcessDetail(scope.row)">
             {{ t('backlog.viewApproval') }}
           </el-button>
         </template>
@@ -169,11 +166,14 @@
       @pagination="getList"
     />
   </ContentWrap>
+  <FollowUpRecordForm ref="followUpFormRef" @success="onFollowUpSuccess" />
 </template>
 
 <script setup lang="ts" name="EndContract">
 import { dateFormatter, dateFormatter2 } from '@/utils/formatTime'
 import * as ContractApi from '@/api/crm/contract'
+import FollowUpRecordForm from '@/views/crm/followup/FollowUpRecordForm.vue'
+import { emitBadgeRefresh } from '@/hooks/web/useCrmBadgeEvent'
 import { fenToYuanFormat } from '@/utils/formatter'
 import { DICT_TYPE } from '@/utils/dict'
 import { CONTRACT_EXPIRY_TYPE } from './common'
@@ -181,6 +181,8 @@ import { erpPriceInputFormatter, erpPriceTableColumnFormatter } from '@/utils'
 
 const { t } = useI18n('crm') // 国际化
 const loading = ref(true) // 列表的加载中
+
+const refreshBacklogCount = inject<() => void>('refreshBacklogCount', () => {})
 const total = ref(0) // 列表的总页数
 const list = ref([]) // 列表的数据
 const queryParams = reactive({
@@ -217,6 +219,15 @@ const handleProcessDetail = (row: ContractApi.ContractVO) => {
 const { push } = useRouter()
 const openDetail = (id: number) => {
   push({ name: 'CrmContractDetail', params: { id } })
+}
+
+const followUpFormRef = ref()
+const handleFollowUp = (row: any) => { followUpFormRef.value.open(5, row.id) }
+
+/** 跟进成功：刷新列表、侧边栏计数、菜单红点 */
+const onFollowUpSuccess = () => {
+  getList()
+  refreshBacklogCount()
 }
 
 /** 打开客户详情 */
